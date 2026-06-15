@@ -1,0 +1,9 @@
+{
+  "name": "spotify-lyrics-cn-window",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local Spotify lyrics window with Chinese translation.",
+  "scripts": {
+    "start": "node server.js"
+  }
+}

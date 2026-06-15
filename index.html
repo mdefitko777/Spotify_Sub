@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Spotify 中文字幕窗口</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <main class="shell">
+      <section class="lyrics-pane" aria-label="Lyrics window">
+        <div class="track-bar">
+          <div>
+            <div id="trackTitle" class="track-title">未连接 Spotify</div>
+            <div id="trackMeta" class="track-meta">连接后会自动同步当前播放</div>
+          </div>
+          <div id="playState" class="state-dot" title="Playback state"></div>
+        </div>
+
+        <div id="lyricsViewport" class="lyrics-viewport">
+          <div id="lyricsList" class="lyrics-list">
+            <div class="empty-state">连接 Spotify，或粘贴 LRC 歌词开始。</div>
+          </div>
+        </div>
+      </section>
+
+      <aside class="control-panel">
+        <div class="tabs" role="tablist">
+          <button class="tab active" data-tab="connect" type="button">连接</button>
+          <button class="tab" data-tab="lyrics" type="button">歌词</button>
+          <button class="tab" data-tab="style" type="button">样式</button>
+        </div>
+
+        <section class="panel-page active" id="tab-connect">
+          <label>
+            Spotify Client ID
+            <input id="clientId" autocomplete="off" placeholder="粘贴你的 Client ID">
+          </label>
+          <div class="button-row">
+            <button id="connectBtn" type="button">Connect Spotify</button>
+            <button id="disconnectBtn" class="secondary" type="button">断开</button>
+          </div>
+          <p class="hint">Redirect URI: <code id="redirectUri"></code></p>
+          <label>
+            翻译服务
+            <select id="translator">
+              <option value="mymemory">MyMemory 免费接口</option>
+              <option value="libre">LibreTranslate</option>
+              <option value="off">关闭自动翻译</option>
+            </select>
+          </label>
+          <label id="libreUrlWrap" class="hidden">
+            LibreTranslate URL
+            <input id="libreUrl" placeholder="https://libretranslate.com/translate">
+          </label>
+        </section>
+
+        <section class="panel-page" id="tab-lyrics">
+          <div class="button-row">
+            <button id="fetchLyricsBtn" type="button">查找歌词</button>
+            <button id="translateBtn" class="secondary" type="button">翻译当前歌词</button>
+          </div>
+          <label>
+            手动 LRC
+            <textarea id="manualLrc" spellcheck="false" placeholder="[00:12.00] First line..."></textarea>
+          </label>
+          <button id="loadManualBtn" type="button">载入 LRC</button>
+          <p id="statusText" class="status">准备就绪</p>
+        </section>
+
+        <section class="panel-page" id="tab-style">
+          <label>
+            字号
+            <input id="fontSize" type="range" min="18" max="42" value="28">
+          </label>
+          <label>
+            透明度
+            <input id="opacity" type="range" min="65" max="100" value="92">
+          </label>
+          <label class="check-line">
+            <input id="showOriginal" type="checkbox" checked>
+            显示原文
+          </label>
+          <label class="check-line">
+            <input id="compactMode" type="checkbox">
+            紧凑字幕条
+          </label>
+        </section>
+      </aside>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>

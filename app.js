@@ -38,6 +38,8 @@ const els = {
   translateBtn: document.querySelector("#translateBtn"),
   manualLrc: document.querySelector("#manualLrc"),
   loadManualBtn: document.querySelector("#loadManualBtn"),
+  copyChatGptBtn: document.querySelector("#copyChatGptBtn"),
+  importTranslationBtn: document.querySelector("#importTranslationBtn"),
   statusText: document.querySelector("#statusText"),
   translator: document.querySelector("#translator"),
   openAiModel: document.querySelector("#openAiModel"),
@@ -99,6 +101,8 @@ function bindEvents() {
   els.fetchLyricsBtn.addEventListener("click", () => fetchLyricsForTrack(true));
   els.translateBtn.addEventListener("click", translateVisibleLyrics);
   els.loadManualBtn.addEventListener("click", loadManualLyrics);
+  els.copyChatGptBtn.addEventListener("click", copyChatGPTPrompt);
+  els.importTranslationBtn.addEventListener("click", importManualTranslation);
   els.pinToggle.addEventListener("click", toggleAlwaysOnTop);
   els.openAtLogin.addEventListener("change", toggleOpenAtLogin);
   els.saveConfigBtn.addEventListener("click", saveSettings);
@@ -452,6 +456,121 @@ function loadManualLyrics() {
   setStatus(`已载入 ${parsed.length} 行手动歌词。`);
   saveCurrentSongCache("manual");
   translateVisibleLyrics();
+}
+
+async function copyChatGPTPrompt() {
+  if (!state.lyrics.length) {
+    setStatus("请先载入当前歌曲的歌词，再复制给 ChatGPT。", true);
+    return;
+  }
+  const trackText = state.track
+    ? `${state.track.title} - ${state.track.artist}`
+    : "当前歌曲";
+  const lines = state.lyrics
+    .map((line, index) => `${index + 1}. ${line.original}`)
+    .join("\n");
+  const prompt = [
+    `请把下面歌曲《${trackText}》的歌词翻译成自然、适合字幕显示的简体中文。`,
+    "要求：",
+    "1. 保持行数和编号完全一致。",
+    "2. 每行只输出：编号. 中文翻译",
+    "3. 不要解释，不要输出原文。",
+    "",
+    lines
+  ].join("\n");
+
+  try {
+    await navigator.clipboard.writeText(prompt);
+    setStatus("已复制给 ChatGPT 的翻译提示词。粘贴到 ChatGPT 后，把结果复制回来点“导入翻译”。");
+  } catch {
+    els.manualLrc.value = prompt;
+    setStatus("无法访问剪贴板，已把提示词放进文本框。");
+  }
+}
+
+async function importManualTranslation() {
+  if (!state.lyrics.length) {
+    setStatus("请先载入 LRC 或让软件找到歌词，再导入翻译。", true);
+    return;
+  }
+  const text = els.manualLrc.value.trim();
+  if (!text) {
+    setStatus("请先粘贴 ChatGPT 翻译结果。", true);
+    return;
+  }
+
+  const translations = parseImportedTranslations(text, state.lyrics.length);
+  if (!translations.length) {
+    setStatus("没有识别到可导入的翻译。可以粘贴纯中文逐行、编号列表或 JSON 数组。", true);
+    return;
+  }
+
+  let applied = 0;
+  translations.forEach((translation, index) => {
+    if (!translation || !state.lyrics[index]) return;
+    state.lyrics[index].translation = translation;
+    applied += 1;
+  });
+
+  renderLyrics();
+  await saveCurrentSongCache("manual-translation");
+  setStatus(`已自动导入 ${applied} 行翻译，并保存到本地缓存。`);
+}
+
+function parseImportedTranslations(text, expectedCount) {
+  const json = parseTranslationJson(text, expectedCount);
+  if (json.length) return json;
+
+  const numbered = [];
+  const plain = [];
+  text.split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .forEach((line) => {
+      const stripped = line
+        .replace(/^[-*]\s+/, "")
+        .replace(/^["'“”]+|["'“”]+$/g, "")
+        .trim();
+      const numberedMatch = stripped.match(/^(\d{1,4})[\s.)、:：-]+(.+)$/);
+      if (numberedMatch) {
+        const index = Number(numberedMatch[1]) - 1;
+        const value = cleanImportedTranslation(numberedMatch[2]);
+        if (index >= 0 && index < expectedCount && value) numbered[index] = value;
+        return;
+      }
+      const arrowMatch = stripped.match(/^.+?(?:=>|->|→|：|:)\s*(.+)$/);
+      const value = cleanImportedTranslation(arrowMatch ? arrowMatch[1] : stripped);
+      if (value) plain.push(value);
+    });
+
+  if (numbered.filter(Boolean).length) return fillByOrder(numbered, expectedCount);
+  return plain.slice(0, expectedCount);
+}
+
+function parseTranslationJson(text, expectedCount) {
+  try {
+    const parsed = JSON.parse(text);
+    const values = Array.isArray(parsed) ? parsed : parsed.translations;
+    if (!Array.isArray(values)) return [];
+    return values.map((item) => cleanImportedTranslation(String(item || ""))).filter(Boolean).slice(0, expectedCount);
+  } catch {
+    return [];
+  }
+}
+
+function fillByOrder(values, expectedCount) {
+  const result = [];
+  for (let index = 0; index < expectedCount; index += 1) {
+    if (values[index]) result[index] = values[index];
+  }
+  return result;
+}
+
+function cleanImportedTranslation(text) {
+  return String(text || "")
+    .replace(/^["'“”]+|["'“”]+$/g, "")
+    .replace(/,$/, "")
+    .trim();
 }
 
 function parseLrc(text) {

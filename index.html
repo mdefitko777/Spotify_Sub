@@ -90,10 +90,14 @@
             <button id="translateBtn" class="secondary" type="button">翻译当前歌词</button>
           </div>
           <label>
-            手动 LRC
-            <textarea id="manualLrc" spellcheck="false" placeholder="[00:12.00] First line..."></textarea>
+            LRC / ChatGPT 翻译
+            <textarea id="manualLrc" spellcheck="false" placeholder="[00:12.00] First line...&#10;&#10;也可以粘贴 ChatGPT 翻译结果。"></textarea>
           </label>
-          <button id="loadManualBtn" type="button">载入 LRC</button>
+          <div class="button-row">
+            <button id="loadManualBtn" type="button">载入 LRC</button>
+            <button id="copyChatGptBtn" class="secondary" type="button">复制给 ChatGPT</button>
+          </div>
+          <button id="importTranslationBtn" type="button">导入翻译</button>
           <p id="statusText" class="status">准备就绪</p>
         </section>
 

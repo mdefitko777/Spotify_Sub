@@ -6,6 +6,14 @@
 
 桌面版：
 
+双击启动：
+
+```text
+start-desktop.cmd
+```
+
+PowerShell 启动：
+
 ```powershell
 .\start-desktop.ps1
 ```

@@ -146,6 +146,12 @@ textarea {
   line-height: 1.25;
 }
 
+.translation.pending {
+  color: var(--muted);
+  font-weight: 700;
+  opacity: 0.75;
+}
+
 .empty-state {
   color: var(--muted);
   font-size: 22px;
@@ -238,6 +244,11 @@ code {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
+  margin-bottom: 14px;
+}
+
+.wide-button {
+  width: 100%;
   margin-bottom: 14px;
 }
 

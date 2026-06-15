@@ -47,6 +47,7 @@ const els = {
   openAiStatus: document.querySelector("#openAiStatus"),
   saveConfigRow: document.querySelector("#saveConfigRow"),
   saveConfigBtn: document.querySelector("#saveConfigBtn"),
+  testOpenAiBtn: document.querySelector("#testOpenAiBtn"),
   hideSettingsBtn: document.querySelector("#hideSettingsBtn"),
   connectedSummary: document.querySelector("#connectedSummary"),
   editSettingsBtn: document.querySelector("#editSettingsBtn"),
@@ -101,6 +102,7 @@ function bindEvents() {
   els.pinToggle.addEventListener("click", toggleAlwaysOnTop);
   els.openAtLogin.addEventListener("change", toggleOpenAtLogin);
   els.saveConfigBtn.addEventListener("click", saveSettings);
+  els.testOpenAiBtn.addEventListener("click", testOpenAI);
   els.hideSettingsBtn.addEventListener("click", collapseSettings);
   els.editSettingsBtn.addEventListener("click", expandSettings);
 
@@ -476,9 +478,10 @@ function renderLyrics() {
   }
   els.lyricsList.innerHTML = state.lyrics.map((line, index) => {
     const original = escapeHtml(line.original);
-    const translation = escapeHtml(line.translation || line.original);
+    const translation = escapeHtml(line.translation || "待翻译");
+    const pendingClass = line.translation ? "" : " pending";
     const originalHtml = els.showOriginal.checked ? `<div class="original">${original}</div>` : "";
-    return `<div class="lyric-line" data-index="${index}">${originalHtml}<div class="translation">${translation}</div></div>`;
+    return `<div class="lyric-line" data-index="${index}">${originalHtml}<div class="translation${pendingClass}">${translation}</div></div>`;
   }).join("");
   updateActiveLine(true);
 }
@@ -555,14 +558,46 @@ async function translateLyricsWithOpenAI() {
       lines: missing.map((item) => item.line.original)
     });
 
+    let translatedCount = 0;
     missing.forEach((item, offset) => {
-      item.line.translation = translations[offset] || item.line.original;
+      const translated = translations[offset] || "";
+      if (translated && translated.trim() !== item.line.original.trim()) {
+        item.line.translation = translated;
+        translatedCount += 1;
+      } else {
+        item.line.translation = "";
+      }
     });
     renderLyrics();
+    if (!translatedCount) {
+      throw new Error("OpenAI 没有返回有效中文翻译，请检查 API Key、余额或模型名。");
+    }
     await saveCurrentSongCache("openai-translated");
-    setStatus("OpenAI 翻译完成，已保存到本地缓存。");
+    setStatus(`OpenAI 翻译完成 ${translatedCount} 行，已保存到本地缓存。`);
   } catch (error) {
     setStatus(`OpenAI 翻译失败：${error.message}`, true);
+  }
+}
+
+async function testOpenAI() {
+  saveSettings();
+  if (!window.desktopApi) {
+    setStatus("OpenAI 测试需要桌面版。", true);
+    return;
+  }
+  setStatus("正在测试 OpenAI...");
+  try {
+    const result = await window.desktopApi.translateWithOpenAI({
+      model: els.openAiModel.value.trim() || "gpt-4.1-mini",
+      track: { title: "API test" },
+      lines: ["さよなら"]
+    });
+    if (!result[0] || result[0] === "さよなら") {
+      throw new Error("OpenAI 返回了空翻译。");
+    }
+    setStatus(`OpenAI 测试成功：さよなら -> ${result[0]}`);
+  } catch (error) {
+    setStatus(`OpenAI 测试失败：${error.message}`, true);
   }
 }
 

@@ -90,6 +90,24 @@ function cacheDir() {
   return path.join(app.getPath("userData"), "song-cache");
 }
 
+function configPath() {
+  return path.join(app.getPath("userData"), "config.json");
+}
+
+async function readConfig() {
+  try {
+    return JSON.parse(await fs.readFile(configPath(), "utf8"));
+  } catch {
+    return {};
+  }
+}
+
+async function writeConfig(config) {
+  await fs.mkdir(app.getPath("userData"), { recursive: true });
+  await fs.writeFile(configPath(), JSON.stringify(config, null, 2), "utf8");
+  return config;
+}
+
 function safeFileName(input) {
   return input.replace(/[<>:"/\\|?*\x00-\x1F]/g, "_").slice(0, 160);
 }
@@ -127,17 +145,53 @@ ipcMain.handle("app:setOpenAtLogin", (_event, enabled) => {
   return app.getLoginItemSettings().openAtLogin;
 });
 
-ipcMain.handle("app:getDesktopState", () => ({
-  isDesktop: true,
-  alwaysOnTop: mainWindow.isAlwaysOnTop(),
-  openAtLogin: app.getLoginItemSettings().openAtLogin,
-  openAiAvailable: Boolean(process.env.OPENAI_API_KEY)
-}));
+ipcMain.handle("app:getDesktopState", async () => {
+  const config = await readConfig();
+  return {
+    isDesktop: true,
+    alwaysOnTop: mainWindow.isAlwaysOnTop(),
+    openAtLogin: app.getLoginItemSettings().openAtLogin,
+    openAiAvailable: Boolean(config.openAiKey || process.env.OPENAI_API_KEY),
+    config
+  };
+});
+
+ipcMain.handle("app:saveConfig", async (_event, partialConfig) => {
+  const current = await readConfig();
+  const next = {
+    ...current,
+    ...partialConfig,
+    settings: {
+      ...(current.settings || {}),
+      ...(partialConfig.settings || {})
+    }
+  };
+  await writeConfig(next);
+  return {
+    openAiAvailable: Boolean(next.openAiKey || process.env.OPENAI_API_KEY),
+    config: next
+  };
+});
+
+ipcMain.handle("spotify:saveToken", async (_event, token) => {
+  const current = await readConfig();
+  current.spotifyToken = token;
+  await writeConfig(current);
+  return true;
+});
+
+ipcMain.handle("spotify:clearToken", async () => {
+  const current = await readConfig();
+  delete current.spotifyToken;
+  await writeConfig(current);
+  return true;
+});
 
 ipcMain.handle("openai:translate", async (_event, payload) => {
-  const apiKey = process.env.OPENAI_API_KEY;
+  const config = await readConfig();
+  const apiKey = config.openAiKey || process.env.OPENAI_API_KEY;
   if (!apiKey) {
-    throw new Error("OPENAI_API_KEY is not set");
+    throw new Error("请先在连接页保存 OpenAI API Key。");
   }
 
   const lines = Array.isArray(payload.lines) ? payload.lines : [];
@@ -159,7 +213,7 @@ ipcMain.handle("openai:translate", async (_event, payload) => {
           content: [
             {
               type: "input_text",
-              text: "Translate song lyrics into natural Simplified Chinese. Preserve meaning, tone, line count, and order. Return only a JSON array of translated strings."
+              text: "Translate song lyrics into natural Simplified Chinese. Preserve meaning, tone, line count, and order. Return only JSON with a translations array."
             }
           ]
         },

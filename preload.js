@@ -2,6 +2,9 @@ const { contextBridge, ipcRenderer } = require("electron");
 
 contextBridge.exposeInMainWorld("desktopApi", {
   getDesktopState: () => ipcRenderer.invoke("app:getDesktopState"),
+  saveAppConfig: (payload) => ipcRenderer.invoke("app:saveConfig", payload),
+  saveSpotifyToken: (payload) => ipcRenderer.invoke("spotify:saveToken", payload),
+  clearSpotifyToken: () => ipcRenderer.invoke("spotify:clearToken"),
   loadSongCache: (songKey) => ipcRenderer.invoke("cache:load", songKey),
   saveSongCache: (payload) => ipcRenderer.invoke("cache:save", payload),
   translateWithOpenAI: (payload) => ipcRenderer.invoke("openai:translate", payload),

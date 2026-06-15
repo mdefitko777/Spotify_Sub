@@ -2,3 +2,4 @@ chrome-check/
 chrome-dom/
 screenshot.png
 node_modules/
+dist/

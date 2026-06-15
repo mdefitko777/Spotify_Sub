@@ -6,9 +6,36 @@
   "main": "electron-main.js",
   "scripts": {
     "start": "node server.js",
-    "desktop": "electron ."
+    "desktop": "electron .",
+    "dist": "electron-builder --win nsis portable"
   },
   "devDependencies": {
-    "electron": "^39.2.7"
+    "electron": "^39.2.7",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "com.spotify.subtitles.cn",
+    "productName": "Spotify Sub",
+    "files": [
+      "app.js",
+      "electron-main.js",
+      "index.html",
+      "preload.js",
+      "server.js",
+      "styles.css",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
   }
 }

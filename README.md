@@ -18,6 +18,30 @@ PowerShell 启动：
 .\start-desktop.ps1
 ```
 
+打包 exe：
+
+```powershell
+npm.cmd run dist
+```
+
+打包产物会生成在：
+
+```text
+dist
+```
+
+常用的是：
+
+```text
+dist\Spotify Sub 0.1.0.exe
+```
+
+安装版是：
+
+```text
+dist\Spotify Sub Setup 0.1.0.exe
+```
+
 第一次运行会安装 Electron 依赖。桌面版支持：
 
 - 永远置顶窗口

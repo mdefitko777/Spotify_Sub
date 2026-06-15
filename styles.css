@@ -248,6 +248,33 @@ code {
   line-height: 1.5;
 }
 
+.connected-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  margin-bottom: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #101218;
+}
+
+.connected-summary strong,
+.connected-summary span {
+  display: block;
+}
+
+.connected-summary span {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+body.settings-collapsed .setup-only {
+  display: none;
+}
+
 .status.error {
   color: var(--danger);
 }

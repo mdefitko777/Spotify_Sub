@@ -35,15 +35,22 @@
         </div>
 
         <section class="panel-page active" id="tab-connect">
-          <label>
+          <div id="connectedSummary" class="connected-summary hidden">
+            <div>
+              <strong>已连接 Spotify</strong>
+              <span>配置已保存，下次会自动恢复。</span>
+            </div>
+            <button id="editSettingsBtn" class="secondary" type="button">编辑配置</button>
+          </div>
+          <label class="setup-only">
             Spotify Client ID
             <input id="clientId" autocomplete="off" placeholder="粘贴你的 Client ID">
           </label>
-          <div class="button-row">
+          <div class="button-row setup-only">
             <button id="connectBtn" type="button">Connect Spotify</button>
             <button id="disconnectBtn" class="secondary" type="button">断开</button>
           </div>
-          <p class="hint">Redirect URI: <code id="redirectUri"></code></p>
+          <p class="hint setup-only">Redirect URI: <code id="redirectUri"></code></p>
           <label>
             翻译服务
             <select id="translator">
@@ -57,6 +64,14 @@
             OpenAI Model
             <input id="openAiModel" placeholder="gpt-4.1-mini">
           </label>
+          <label id="openAiKeyWrap" class="hidden setup-only">
+            OpenAI API Key
+            <input id="openAiKey" type="password" autocomplete="off" placeholder="sk-...">
+          </label>
+          <div id="saveConfigRow" class="button-row hidden setup-only">
+            <button id="saveConfigBtn" type="button">保存配置</button>
+            <button id="hideSettingsBtn" class="secondary" type="button">收起</button>
+          </div>
           <p id="openAiStatus" class="hint hidden"></p>
           <label id="libreUrlWrap" class="hidden">
             LibreTranslate URL

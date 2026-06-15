@@ -16,6 +16,9 @@ const state = {
   lastSyncAt: 0,
   isDesktop: Boolean(window.desktopApi),
   openAiAvailable: false,
+  showSettings: false,
+  desktopConfig: null,
+  savedSpotifyToken: null,
   translateCache: loadJson("translateCache", {}),
   settings: loadJson("settings", {})
 };
@@ -39,7 +42,14 @@ const els = {
   translator: document.querySelector("#translator"),
   openAiModel: document.querySelector("#openAiModel"),
   openAiModelWrap: document.querySelector("#openAiModelWrap"),
+  openAiKey: document.querySelector("#openAiKey"),
+  openAiKeyWrap: document.querySelector("#openAiKeyWrap"),
   openAiStatus: document.querySelector("#openAiStatus"),
+  saveConfigRow: document.querySelector("#saveConfigRow"),
+  saveConfigBtn: document.querySelector("#saveConfigBtn"),
+  hideSettingsBtn: document.querySelector("#hideSettingsBtn"),
+  connectedSummary: document.querySelector("#connectedSummary"),
+  editSettingsBtn: document.querySelector("#editSettingsBtn"),
   libreUrl: document.querySelector("#libreUrl"),
   libreUrlWrap: document.querySelector("#libreUrlWrap"),
   openAtLogin: document.querySelector("#openAtLogin"),
@@ -52,19 +62,20 @@ const els = {
 
 init();
 
-function init() {
+async function init() {
   els.redirectUri.textContent = redirectUri();
+  bindEvents();
+  await initDesktop();
   els.clientId.value = state.settings.clientId || "";
   els.translator.value = state.settings.translator || "openai";
   els.openAiModel.value = state.settings.openAiModel || "gpt-4.1-mini";
+  els.openAiKey.value = state.desktopConfig?.openAiKey || "";
   els.libreUrl.value = state.settings.libreUrl || "";
   els.fontSize.value = state.settings.fontSize || 28;
   els.opacity.value = state.settings.opacity || 92;
   els.showOriginal.checked = state.settings.showOriginal !== false;
   els.compactMode.checked = Boolean(state.settings.compactMode);
   applyStyleSettings();
-  bindEvents();
-  initDesktop();
   restoreToken();
   handleSpotifyCallback();
   pollSpotify();
@@ -89,8 +100,11 @@ function bindEvents() {
   els.loadManualBtn.addEventListener("click", loadManualLyrics);
   els.pinToggle.addEventListener("click", toggleAlwaysOnTop);
   els.openAtLogin.addEventListener("change", toggleOpenAtLogin);
+  els.saveConfigBtn.addEventListener("click", saveSettings);
+  els.hideSettingsBtn.addEventListener("click", collapseSettings);
+  els.editSettingsBtn.addEventListener("click", expandSettings);
 
-  [els.clientId, els.translator, els.openAiModel, els.libreUrl, els.fontSize, els.opacity, els.showOriginal, els.compactMode].forEach((el) => {
+  [els.clientId, els.translator, els.openAiModel, els.openAiKey, els.libreUrl, els.fontSize, els.opacity, els.showOriginal, els.compactMode].forEach((el) => {
     el.addEventListener("input", saveSettings);
     el.addEventListener("change", saveSettings);
   });
@@ -120,6 +134,19 @@ function saveSettings() {
     compactMode: els.compactMode.checked
   };
   saveJson("settings", state.settings);
+  state.openAiAvailable = Boolean(els.openAiKey.value.trim()) || state.openAiAvailable;
+  if (window.desktopApi) {
+    window.desktopApi.saveAppConfig({
+      settings: state.settings,
+      openAiKey: els.openAiKey.value.trim()
+    }).then((result) => {
+      state.desktopConfig = result.config;
+      state.openAiAvailable = Boolean(result.openAiAvailable);
+      applyStyleSettings();
+    }).catch(() => {
+      setStatus("本地配置保存失败。", true);
+    });
+  }
   applyStyleSettings();
 }
 
@@ -128,12 +155,15 @@ function applyStyleSettings() {
   document.documentElement.style.setProperty("--alpha", String(Number(els.opacity.value) / 100));
   document.body.classList.toggle("compact", els.compactMode.checked);
   els.openAiModelWrap.classList.toggle("hidden", els.translator.value !== "openai");
+  els.openAiKeyWrap.classList.toggle("hidden", els.translator.value !== "openai");
+  els.saveConfigRow.classList.toggle("hidden", els.translator.value !== "openai");
   els.openAiStatus.classList.toggle("hidden", els.translator.value !== "openai");
   if (els.translator.value === "openai") {
     els.openAiStatus.textContent = state.isDesktop
-      ? (state.openAiAvailable ? "OpenAI API Key 已从本机环境变量读取。" : "未检测到 OPENAI_API_KEY。")
+      ? (state.openAiAvailable ? "OpenAI API Key 已保存，本地翻译可用。" : "请保存 OpenAI API Key。")
       : "OpenAI 翻译只在桌面版可用。";
   }
+  renderConnectionControls();
   els.libreUrlWrap.classList.toggle("hidden", els.translator.value !== "libre");
   renderLyrics();
 }
@@ -148,6 +178,12 @@ async function initDesktop() {
     const desktopState = await window.desktopApi.getDesktopState();
     state.isDesktop = Boolean(desktopState.isDesktop);
     state.openAiAvailable = Boolean(desktopState.openAiAvailable);
+    state.desktopConfig = desktopState.config || {};
+    state.settings = {
+      ...state.settings,
+      ...(state.desktopConfig.settings || {})
+    };
+    state.savedSpotifyToken = state.desktopConfig.spotifyToken || null;
     els.pinToggle.classList.remove("hidden");
     els.pinToggle.classList.toggle("active", Boolean(desktopState.alwaysOnTop));
     els.openAtLoginWrap.classList.remove("hidden");
@@ -219,6 +255,7 @@ async function handleSpotifyCallback() {
     setToken(data);
     history.replaceState(null, "", redirectUri());
     setStatus("Spotify 已连接。");
+    collapseSettings();
     pollSpotify();
   } catch (error) {
     setStatus(`Spotify 连接失败：${error.message}`, true);
@@ -234,14 +271,22 @@ function setToken(data) {
     refreshToken: state.refreshToken,
     tokenExpiresAt: state.tokenExpiresAt
   });
+  if (window.desktopApi) {
+    window.desktopApi.saveSpotifyToken({
+      token: state.token,
+      refreshToken: state.refreshToken,
+      tokenExpiresAt: state.tokenExpiresAt
+    });
+  }
 }
 
 function restoreToken() {
-  const saved = loadJson("spotifyToken", null);
+  const saved = state.savedSpotifyToken || loadJson("spotifyToken", null);
   if (!saved) return;
   state.token = saved.token;
   state.refreshToken = saved.refreshToken;
   state.tokenExpiresAt = saved.tokenExpiresAt;
+  if (state.token) collapseSettings();
 }
 
 async function ensureToken() {
@@ -266,12 +311,14 @@ async function ensureToken() {
 
 function disconnectSpotify() {
   localStorage.removeItem("spotifyToken");
+  if (window.desktopApi) window.desktopApi.clearSpotifyToken();
   state.token = null;
   state.track = null;
   state.trackKey = "";
   state.progressMs = 0;
   state.isPlaying = false;
   renderTrack();
+  expandSettings();
   setStatus("已断开 Spotify。");
 }
 
@@ -490,7 +537,7 @@ async function translateLyricsWithOpenAI() {
 
   const missing = state.lyrics
     .map((line, index) => ({ line, index }))
-    .filter((item) => !item.line.translation || isBadTranslation(item.line.translation));
+    .filter((item) => shouldTranslateLine(item.line));
   if (!missing.length) {
     setStatus("歌词已经翻译完成。");
     return;
@@ -667,12 +714,34 @@ function isBadTranslation(text) {
   return /invalid source language|langpair=/i.test(String(text || ""));
 }
 
+function shouldTranslateLine(line) {
+  if (!line.translation || isBadTranslation(line.translation)) return true;
+  if (line.translation.trim() === line.original.trim() && detectSourceLanguage(line.original) !== "zh-CN") return true;
+  return false;
+}
+
 function sanitizeCachedSong(song) {
   return {
     ...song,
     lyrics: song.lyrics.map((line) => ({
       ...line,
-      translation: isBadTranslation(line.translation) ? "" : line.translation
+      translation: isBadTranslation(line.translation) || shouldTranslateLine(line) ? "" : line.translation
     }))
   };
+}
+
+function collapseSettings() {
+  state.showSettings = false;
+  renderConnectionControls();
+}
+
+function expandSettings() {
+  state.showSettings = true;
+  renderConnectionControls();
+}
+
+function renderConnectionControls() {
+  const canCollapse = Boolean(state.token) && !state.showSettings;
+  document.body.classList.toggle("settings-collapsed", canCollapse);
+  els.connectedSummary.classList.toggle("hidden", !canCollapse);
 }

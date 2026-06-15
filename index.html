@@ -47,11 +47,17 @@
           <label>
             翻译服务
             <select id="translator">
+              <option value="openai">OpenAI API</option>
               <option value="mymemory">MyMemory 免费接口</option>
               <option value="libre">LibreTranslate</option>
               <option value="off">关闭自动翻译</option>
             </select>
           </label>
+          <label id="openAiModelWrap" class="hidden">
+            OpenAI Model
+            <input id="openAiModel" placeholder="gpt-4.1-mini">
+          </label>
+          <p id="openAiStatus" class="hint hidden"></p>
           <label id="libreUrlWrap" class="hidden">
             LibreTranslate URL
             <input id="libreUrl" placeholder="https://libretranslate.com/translate">

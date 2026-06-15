@@ -130,8 +130,98 @@ ipcMain.handle("app:setOpenAtLogin", (_event, enabled) => {
 ipcMain.handle("app:getDesktopState", () => ({
   isDesktop: true,
   alwaysOnTop: mainWindow.isAlwaysOnTop(),
-  openAtLogin: app.getLoginItemSettings().openAtLogin
+  openAtLogin: app.getLoginItemSettings().openAtLogin,
+  openAiAvailable: Boolean(process.env.OPENAI_API_KEY)
 }));
+
+ipcMain.handle("openai:translate", async (_event, payload) => {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) {
+    throw new Error("OPENAI_API_KEY is not set");
+  }
+
+  const lines = Array.isArray(payload.lines) ? payload.lines : [];
+  if (!lines.length) return [];
+
+  const model = payload.model || process.env.OPENAI_TRANSLATE_MODEL || "gpt-4.1-mini";
+  const track = payload.track || {};
+  const response = await fetch("https://api.openai.com/v1/responses", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      model,
+      input: [
+        {
+          role: "developer",
+          content: [
+            {
+              type: "input_text",
+              text: "Translate song lyrics into natural Simplified Chinese. Preserve meaning, tone, line count, and order. Return only a JSON array of translated strings."
+            }
+          ]
+        },
+        {
+          role: "user",
+          content: [
+            {
+              type: "input_text",
+              text: JSON.stringify({
+                track,
+                lines
+              })
+            }
+          ]
+        }
+      ],
+      text: {
+        format: {
+          type: "json_schema",
+          name: "lyrics_translation",
+          strict: true,
+          schema: {
+            type: "object",
+            additionalProperties: false,
+            properties: {
+              translations: {
+                type: "array",
+                items: { type: "string" }
+              }
+            },
+            required: ["translations"]
+          }
+        }
+      }
+    })
+  });
+
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.error?.message || "OpenAI translation failed");
+  }
+
+  const text = extractOpenAIText(data);
+  const parsed = JSON.parse(text);
+  if (!Array.isArray(parsed.translations)) {
+    throw new Error("OpenAI response did not include translations");
+  }
+  return parsed.translations.slice(0, lines.length);
+});
+
+function extractOpenAIText(data) {
+  if (typeof data.output_text === "string") return data.output_text;
+  const parts = [];
+  for (const item of data.output || []) {
+    for (const content of item.content || []) {
+      if (content.type === "output_text" && typeof content.text === "string") {
+        parts.push(content.text);
+      }
+    }
+  }
+  return parts.join("");
+}
 
 app.whenReady().then(createWindow);
 

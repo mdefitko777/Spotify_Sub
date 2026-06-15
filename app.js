@@ -15,6 +15,7 @@ const state = {
   isPlaying: false,
   lastSyncAt: 0,
   isDesktop: Boolean(window.desktopApi),
+  openAiAvailable: false,
   translateCache: loadJson("translateCache", {}),
   settings: loadJson("settings", {})
 };
@@ -36,6 +37,9 @@ const els = {
   loadManualBtn: document.querySelector("#loadManualBtn"),
   statusText: document.querySelector("#statusText"),
   translator: document.querySelector("#translator"),
+  openAiModel: document.querySelector("#openAiModel"),
+  openAiModelWrap: document.querySelector("#openAiModelWrap"),
+  openAiStatus: document.querySelector("#openAiStatus"),
   libreUrl: document.querySelector("#libreUrl"),
   libreUrlWrap: document.querySelector("#libreUrlWrap"),
   openAtLogin: document.querySelector("#openAtLogin"),
@@ -51,7 +55,8 @@ init();
 function init() {
   els.redirectUri.textContent = redirectUri();
   els.clientId.value = state.settings.clientId || "";
-  els.translator.value = state.settings.translator || "mymemory";
+  els.translator.value = state.settings.translator || "openai";
+  els.openAiModel.value = state.settings.openAiModel || "gpt-4.1-mini";
   els.libreUrl.value = state.settings.libreUrl || "";
   els.fontSize.value = state.settings.fontSize || 28;
   els.opacity.value = state.settings.opacity || 92;
@@ -85,7 +90,7 @@ function bindEvents() {
   els.pinToggle.addEventListener("click", toggleAlwaysOnTop);
   els.openAtLogin.addEventListener("change", toggleOpenAtLogin);
 
-  [els.clientId, els.translator, els.libreUrl, els.fontSize, els.opacity, els.showOriginal, els.compactMode].forEach((el) => {
+  [els.clientId, els.translator, els.openAiModel, els.libreUrl, els.fontSize, els.opacity, els.showOriginal, els.compactMode].forEach((el) => {
     el.addEventListener("input", saveSettings);
     el.addEventListener("change", saveSettings);
   });
@@ -107,6 +112,7 @@ function saveSettings() {
   state.settings = {
     clientId: els.clientId.value.trim(),
     translator: els.translator.value,
+    openAiModel: els.openAiModel.value.trim() || "gpt-4.1-mini",
     libreUrl: els.libreUrl.value.trim(),
     fontSize: Number(els.fontSize.value),
     opacity: Number(els.opacity.value),
@@ -121,6 +127,13 @@ function applyStyleSettings() {
   document.documentElement.style.setProperty("--font-size", `${els.fontSize.value}px`);
   document.documentElement.style.setProperty("--alpha", String(Number(els.opacity.value) / 100));
   document.body.classList.toggle("compact", els.compactMode.checked);
+  els.openAiModelWrap.classList.toggle("hidden", els.translator.value !== "openai");
+  els.openAiStatus.classList.toggle("hidden", els.translator.value !== "openai");
+  if (els.translator.value === "openai") {
+    els.openAiStatus.textContent = state.isDesktop
+      ? (state.openAiAvailable ? "OpenAI API Key 已从本机环境变量读取。" : "未检测到 OPENAI_API_KEY。")
+      : "OpenAI 翻译只在桌面版可用。";
+  }
   els.libreUrlWrap.classList.toggle("hidden", els.translator.value !== "libre");
   renderLyrics();
 }
@@ -134,6 +147,7 @@ async function initDesktop() {
   try {
     const desktopState = await window.desktopApi.getDesktopState();
     state.isDesktop = Boolean(desktopState.isDesktop);
+    state.openAiAvailable = Boolean(desktopState.openAiAvailable);
     els.pinToggle.classList.remove("hidden");
     els.pinToggle.classList.toggle("active", Boolean(desktopState.alwaysOnTop));
     els.openAtLoginWrap.classList.remove("hidden");
@@ -450,6 +464,10 @@ async function translateVisibleLyrics() {
     setStatus("自动翻译已关闭。");
     return;
   }
+  if (els.translator.value === "openai") {
+    await translateLyricsWithOpenAI();
+    return;
+  }
   setStatus("正在翻译歌词...");
   let done = 0;
   for (const line of state.lyrics) {
@@ -462,6 +480,43 @@ async function translateVisibleLyrics() {
   saveJson("translateCache", state.translateCache);
   await saveCurrentSongCache("translated");
   setStatus("翻译完成。");
+}
+
+async function translateLyricsWithOpenAI() {
+  if (!window.desktopApi) {
+    setStatus("OpenAI 翻译需要用桌面版启动。", true);
+    return;
+  }
+
+  const missing = state.lyrics
+    .map((line, index) => ({ line, index }))
+    .filter((item) => !item.line.translation || isBadTranslation(item.line.translation));
+  if (!missing.length) {
+    setStatus("歌词已经翻译完成。");
+    return;
+  }
+
+  setStatus(`正在用 OpenAI 翻译 ${missing.length} 行歌词...`);
+  try {
+    const translations = await window.desktopApi.translateWithOpenAI({
+      model: els.openAiModel.value.trim() || "gpt-4.1-mini",
+      track: state.track ? {
+        title: state.track.title,
+        artist: state.track.artist,
+        album: state.track.album
+      } : {},
+      lines: missing.map((item) => item.line.original)
+    });
+
+    missing.forEach((item, offset) => {
+      item.line.translation = translations[offset] || item.line.original;
+    });
+    renderLyrics();
+    await saveCurrentSongCache("openai-translated");
+    setStatus("OpenAI 翻译完成，已保存到本地缓存。");
+  } catch (error) {
+    setStatus(`OpenAI 翻译失败：${error.message}`, true);
+  }
 }
 
 function songKey(track = state.track) {
@@ -488,10 +543,11 @@ async function loadCurrentSongCache() {
   if (!state.track) return null;
   const key = songKey();
   const local = loadJson(`song:${key}`, null);
-  if (local?.lyrics?.length) return local;
+  if (local?.lyrics?.length) return sanitizeCachedSong(local);
   if (!window.desktopApi) return null;
   try {
-    return await window.desktopApi.loadSongCache(key);
+    const cached = await window.desktopApi.loadSongCache(key);
+    return cached?.lyrics?.length ? sanitizeCachedSong(cached) : cached;
   } catch {
     return null;
   }
@@ -511,7 +567,7 @@ async function saveCurrentSongCache(source) {
     lyrics: state.lyrics.map((line) => ({
       timeMs: line.timeMs,
       original: line.original,
-      translation: line.translation || ""
+      translation: isBadTranslation(line.translation) ? "" : line.translation || ""
     }))
   };
   saveJson(`song:${payload.songKey}`, payload);
@@ -525,7 +581,8 @@ async function saveCurrentSongCache(source) {
 
 async function translateText(text) {
   const key = `${els.translator.value}:zh:${text}`;
-  if (state.translateCache[key]) return state.translateCache[key];
+  if (state.translateCache[key] && !isBadTranslation(state.translateCache[key])) return state.translateCache[key];
+  if (isBadTranslation(state.translateCache[key])) delete state.translateCache[key];
   try {
     let translated = text;
     if (els.translator.value === "libre") {
@@ -533,6 +590,7 @@ async function translateText(text) {
     } else {
       translated = await translateMyMemory(text);
     }
+    if (isBadTranslation(translated)) throw new Error("bad translation response");
     state.translateCache[key] = translated || text;
     return state.translateCache[key];
   } catch {
@@ -541,12 +599,15 @@ async function translateText(text) {
 }
 
 async function translateMyMemory(text) {
+  const source = detectSourceLanguage(text);
+  if (source === "zh-CN") return text;
   const url = new URL("https://api.mymemory.translated.net/get");
   url.searchParams.set("q", text);
-  url.searchParams.set("langpair", "auto|zh-CN");
+  url.searchParams.set("langpair", `${source}|zh-CN`);
   const res = await fetch(url);
   if (!res.ok) throw new Error("translation failed");
   const data = await res.json();
+  if (Number(data.responseStatus) >= 400) throw new Error(data.responseDetails || "translation failed");
   return data.responseData?.translatedText || text;
 }
 
@@ -590,4 +651,28 @@ function escapeHtml(text) {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
+}
+
+function detectSourceLanguage(text) {
+  const value = String(text || "");
+  if (/[\u3040-\u30ff]/.test(value)) return "ja";
+  if (/[\uac00-\ud7af]/.test(value)) return "ko";
+  if (/[\u4e00-\u9fff]/.test(value)) return "zh-CN";
+  if (/[а-яё]/i.test(value)) return "ru";
+  if (/[a-z]/i.test(value)) return "en";
+  return "en";
+}
+
+function isBadTranslation(text) {
+  return /invalid source language|langpair=/i.test(String(text || ""));
+}
+
+function sanitizeCachedSong(song) {
+  return {
+    ...song,
+    lyrics: song.lyrics.map((line) => ({
+      ...line,
+      translation: isBadTranslation(line.translation) ? "" : line.translation
+    }))
+  };
 }

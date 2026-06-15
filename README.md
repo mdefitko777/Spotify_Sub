@@ -61,7 +61,31 @@ user-read-currently-playing user-read-playback-state
 
 ## 翻译
 
-默认使用 MyMemory 免费接口，适合试用。你也可以在设置里填 LibreTranslate 地址，例如：
+桌面版默认使用 OpenAI API 翻译。先在 PowerShell 里设置 API Key：
+
+```powershell
+setx OPENAI_API_KEY "你的 OpenAI API Key"
+```
+
+设置后重新打开一个 PowerShell，再启动桌面版：
+
+```powershell
+.\start-desktop.ps1
+```
+
+默认模型是：
+
+```text
+gpt-4.1-mini
+```
+
+也可以在设置里改模型名，或用环境变量指定：
+
+```powershell
+setx OPENAI_TRANSLATE_MODEL "gpt-4.1-mini"
+```
+
+如果不想用 OpenAI，也可以切换到 MyMemory 免费接口，或在设置里填 LibreTranslate 地址，例如：
 
 ```text
 https://libretranslate.com/translate

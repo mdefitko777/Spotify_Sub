@@ -14,6 +14,7 @@ const state = {
   progressMs: 0,
   isPlaying: false,
   lastSyncAt: 0,
+  isDesktop: Boolean(window.desktopApi),
   translateCache: loadJson("translateCache", {}),
   settings: loadJson("settings", {})
 };
@@ -22,6 +23,7 @@ const els = {
   trackTitle: document.querySelector("#trackTitle"),
   trackMeta: document.querySelector("#trackMeta"),
   playState: document.querySelector("#playState"),
+  pinToggle: document.querySelector("#pinToggle"),
   lyricsList: document.querySelector("#lyricsList"),
   lyricsViewport: document.querySelector("#lyricsViewport"),
   clientId: document.querySelector("#clientId"),
@@ -36,6 +38,8 @@ const els = {
   translator: document.querySelector("#translator"),
   libreUrl: document.querySelector("#libreUrl"),
   libreUrlWrap: document.querySelector("#libreUrlWrap"),
+  openAtLogin: document.querySelector("#openAtLogin"),
+  openAtLoginWrap: document.querySelector("#openAtLoginWrap"),
   fontSize: document.querySelector("#fontSize"),
   opacity: document.querySelector("#opacity"),
   showOriginal: document.querySelector("#showOriginal"),
@@ -55,6 +59,7 @@ function init() {
   els.compactMode.checked = Boolean(state.settings.compactMode);
   applyStyleSettings();
   bindEvents();
+  initDesktop();
   restoreToken();
   handleSpotifyCallback();
   pollSpotify();
@@ -77,6 +82,8 @@ function bindEvents() {
   els.fetchLyricsBtn.addEventListener("click", () => fetchLyricsForTrack(true));
   els.translateBtn.addEventListener("click", translateVisibleLyrics);
   els.loadManualBtn.addEventListener("click", loadManualLyrics);
+  els.pinToggle.addEventListener("click", toggleAlwaysOnTop);
+  els.openAtLogin.addEventListener("change", toggleOpenAtLogin);
 
   [els.clientId, els.translator, els.libreUrl, els.fontSize, els.opacity, els.showOriginal, els.compactMode].forEach((el) => {
     el.addEventListener("input", saveSettings);
@@ -120,6 +127,33 @@ function applyStyleSettings() {
 
 function redirectUri() {
   return `${location.origin}/index.html`;
+}
+
+async function initDesktop() {
+  if (!window.desktopApi) return;
+  try {
+    const desktopState = await window.desktopApi.getDesktopState();
+    state.isDesktop = Boolean(desktopState.isDesktop);
+    els.pinToggle.classList.remove("hidden");
+    els.pinToggle.classList.toggle("active", Boolean(desktopState.alwaysOnTop));
+    els.openAtLoginWrap.classList.remove("hidden");
+    els.openAtLogin.checked = Boolean(desktopState.openAtLogin);
+  } catch {
+    state.isDesktop = false;
+  }
+}
+
+async function toggleAlwaysOnTop() {
+  if (!window.desktopApi) return;
+  const next = !els.pinToggle.classList.contains("active");
+  const actual = await window.desktopApi.setAlwaysOnTop(next);
+  els.pinToggle.classList.toggle("active", Boolean(actual));
+}
+
+async function toggleOpenAtLogin() {
+  if (!window.desktopApi) return;
+  const actual = await window.desktopApi.setOpenAtLogin(els.openAtLogin.checked);
+  els.openAtLogin.checked = Boolean(actual);
 }
 
 async function connectSpotify() {
@@ -261,7 +295,7 @@ async function pollSpotify() {
       state.lyrics = [];
       state.activeIndex = -1;
       renderLyrics();
-      fetchLyricsForTrack(false);
+      loadLyricsForCurrentTrack();
     }
   } catch (error) {
     setStatus(`Spotify 读取失败：${error.message}`, true);
@@ -317,10 +351,26 @@ async function fetchLyricsForTrack(manual) {
     }
     renderLyrics();
     setStatus(`已载入 ${state.lyrics.length} 行歌词，开始翻译...`);
+    await saveCurrentSongCache("lyrics");
     translateVisibleLyrics();
   } catch (error) {
     setStatus(`歌词查找失败：${error.message}${manual ? "" : "。可以手动粘贴 LRC。"}`, true);
   }
+}
+
+async function loadLyricsForCurrentTrack() {
+  const cached = await loadCurrentSongCache();
+  if (cached?.lyrics?.length) {
+    state.lyrics = cached.lyrics;
+    renderLyrics();
+    const translated = state.lyrics.filter((line) => line.translation).length;
+    setStatus(`已从本地缓存载入 ${state.lyrics.length} 行歌词，${translated} 行已翻译。`);
+    if (translated < state.lyrics.length && els.translator.value !== "off") {
+      translateVisibleLyrics();
+    }
+    return;
+  }
+  fetchLyricsForTrack(false);
 }
 
 function loadManualLyrics() {
@@ -337,6 +387,7 @@ function loadManualLyrics() {
   state.lyrics = parsed;
   renderLyrics();
   setStatus(`已载入 ${parsed.length} 行手动歌词。`);
+  saveCurrentSongCache("manual");
   translateVisibleLyrics();
 }
 
@@ -409,7 +460,67 @@ async function translateVisibleLyrics() {
   }
   renderLyrics();
   saveJson("translateCache", state.translateCache);
+  await saveCurrentSongCache("translated");
   setStatus("翻译完成。");
+}
+
+function songKey(track = state.track) {
+  if (!track) return "";
+  return [
+    normalizeKeyPart(track.artist),
+    normalizeKeyPart(track.title),
+    normalizeKeyPart(track.album),
+    Math.round((track.durationMs || 0) / 1000)
+  ].join("__");
+}
+
+function normalizeKeyPart(value) {
+  return String(value || "unknown")
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9\u4e00-\u9fff가-힣ぁ-んァ-ン]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80) || "unknown";
+}
+
+async function loadCurrentSongCache() {
+  if (!state.track) return null;
+  const key = songKey();
+  const local = loadJson(`song:${key}`, null);
+  if (local?.lyrics?.length) return local;
+  if (!window.desktopApi) return null;
+  try {
+    return await window.desktopApi.loadSongCache(key);
+  } catch {
+    return null;
+  }
+}
+
+async function saveCurrentSongCache(source) {
+  if (!state.track || !state.lyrics.length) return;
+  const payload = {
+    songKey: songKey(),
+    source,
+    track: {
+      title: state.track.title,
+      artist: state.track.artist,
+      album: state.track.album,
+      durationMs: state.track.durationMs
+    },
+    lyrics: state.lyrics.map((line) => ({
+      timeMs: line.timeMs,
+      original: line.original,
+      translation: line.translation || ""
+    }))
+  };
+  saveJson(`song:${payload.songKey}`, payload);
+  if (!window.desktopApi) return;
+  try {
+    await window.desktopApi.saveSongCache(payload);
+  } catch {
+    setStatus("歌词已存到浏览器缓存，但桌面文件缓存写入失败。", true);
+  }
 }
 
 async function translateText(text) {

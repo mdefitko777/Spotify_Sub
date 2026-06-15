@@ -19,7 +19,8 @@ function send(res, status, body, headers = {}) {
   res.end(body);
 }
 
-const server = http.createServer((req, res) => {
+function createServer() {
+  return http.createServer((req, res) => {
   const url = new URL(req.url, `http://127.0.0.1:${port}`);
   let filePath = decodeURIComponent(url.pathname);
   if (filePath === "/") filePath = "/index.html";
@@ -42,8 +43,28 @@ const server = http.createServer((req, res) => {
       "Cache-Control": "no-store"
     });
   });
-});
+  });
+}
 
-server.listen(port, "127.0.0.1", () => {
-  console.log(`Spotify lyrics window: http://127.0.0.1:${port}`);
-});
+function listen(preferredPort = port) {
+  const server = createServer();
+  return new Promise((resolve, reject) => {
+    server.once("error", reject);
+    server.listen(preferredPort, "127.0.0.1", () => {
+      server.off("error", reject);
+      const address = server.address();
+      resolve({ server, port: address.port, url: `http://127.0.0.1:${address.port}` });
+    });
+  });
+}
+
+if (require.main === module) {
+  listen(port).then(({ url }) => {
+    console.log(`Spotify lyrics window: ${url}`);
+  }).catch((error) => {
+    console.error(error);
+    process.exit(1);
+  });
+}
+
+module.exports = { listen };

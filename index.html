@@ -14,7 +14,10 @@
             <div id="trackTitle" class="track-title">未连接 Spotify</div>
             <div id="trackMeta" class="track-meta">连接后会自动同步当前播放</div>
           </div>
-          <div id="playState" class="state-dot" title="Playback state"></div>
+          <div class="window-tools">
+            <button id="pinToggle" class="icon-toggle hidden" type="button" title="永远置顶">置顶</button>
+            <div id="playState" class="state-dot" title="Playback state"></div>
+          </div>
         </div>
 
         <div id="lyricsViewport" class="lyrics-viewport">
@@ -52,6 +55,10 @@
           <label id="libreUrlWrap" class="hidden">
             LibreTranslate URL
             <input id="libreUrl" placeholder="https://libretranslate.com/translate">
+          </label>
+          <label id="openAtLoginWrap" class="check-line hidden">
+            <input id="openAtLogin" type="checkbox">
+            开机自启
           </label>
         </section>
 

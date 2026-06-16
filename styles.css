@@ -111,6 +111,38 @@ body.transparent-bg .shell {
   -webkit-app-region: no-drag;
 }
 
+.caption-buttons {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: 4px;
+  padding-left: 8px;
+  border-left: 1px solid var(--line);
+}
+
+.caption-button {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  min-width: 38px;
+  min-height: 32px;
+  padding: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #d7dde5;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.caption-button:hover {
+  background: var(--panel-soft);
+}
+
+.caption-button.close:hover {
+  background: #d83b3b;
+  color: #fff;
+}
+
 .icon-toggle {
   min-height: 34px;
   min-width: 74px;
@@ -444,7 +476,8 @@ body.mini-mode .shell {
 }
 
 body.mini-mode .control-panel,
-body.mini-mode .track-bar {
+body.mini-mode .track-bar,
+body.mini-mode .caption-buttons {
   display: none;
 }
 

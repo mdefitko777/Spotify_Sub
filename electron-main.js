@@ -12,6 +12,8 @@ let isMiniMode = false;
 
 const isWindows = process.platform === "win32";
 
+app.disableHardwareAcceleration();
+
 async function createWindow() {
   localServer = await startLocalServer();
 
@@ -25,6 +27,7 @@ async function createWindow() {
     backgroundColor: "#00000000",
     alwaysOnTop: true,
     skipTaskbar: false,
+    thickFrame: true,
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
@@ -34,6 +37,7 @@ async function createWindow() {
 
   mainWindow.setMenuBarVisibility(false);
   mainWindow.setAlwaysOnTop(true, "screen-saver");
+  mainWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
   await mainWindow.loadURL(`${localServer.url}/index.html`);
   createTray();
 }
@@ -141,6 +145,32 @@ ipcMain.handle("cache:save", async (_event, payload) => {
 ipcMain.handle("window:setAlwaysOnTop", (_event, enabled) => {
   mainWindow.setAlwaysOnTop(Boolean(enabled), "screen-saver");
   return mainWindow.isAlwaysOnTop();
+});
+
+ipcMain.handle("window:minimize", () => {
+  mainWindow.minimize();
+  return true;
+});
+
+ipcMain.handle("window:toggleMaximize", () => {
+  if (mainWindow.isMaximized()) {
+    mainWindow.unmaximize();
+    return false;
+  }
+  mainWindow.maximize();
+  return true;
+});
+
+ipcMain.handle("window:close", () => {
+  mainWindow.hide();
+  return true;
+});
+
+ipcMain.handle("window:setGameMode", (_event, enabled) => {
+  const active = Boolean(enabled);
+  mainWindow.setAlwaysOnTop(true, "screen-saver");
+  mainWindow.setVisibleOnAllWorkspaces(active, { visibleOnFullScreen: active });
+  return active;
 });
 
 ipcMain.handle("window:setMiniMode", (_event, enabled) => {

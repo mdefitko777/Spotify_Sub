@@ -16,6 +16,7 @@ const state = {
   lastSyncAt: 0,
   manualScrollOffset: 0,
   miniMode: false,
+  gameMode: false,
   isDesktop: Boolean(window.desktopApi),
   openAiAvailable: false,
   showSettings: false,
@@ -32,6 +33,9 @@ const els = {
   playState: document.querySelector("#playState"),
   pinToggle: document.querySelector("#pinToggle"),
   miniToggle: document.querySelector("#miniToggle"),
+  windowMinBtn: document.querySelector("#windowMinBtn"),
+  windowMaxBtn: document.querySelector("#windowMaxBtn"),
+  windowCloseBtn: document.querySelector("#windowCloseBtn"),
   lyricsList: document.querySelector("#lyricsList"),
   lyricsViewport: document.querySelector("#lyricsViewport"),
   clientId: document.querySelector("#clientId"),
@@ -73,7 +77,13 @@ const els = {
   shadowStrength: document.querySelector("#shadowStrength"),
   showOriginal: document.querySelector("#showOriginal"),
   compactMode: document.querySelector("#compactMode"),
-  transparentBg: document.querySelector("#transparentBg")
+  transparentBg: document.querySelector("#transparentBg"),
+  gameMode: document.querySelector("#gameMode")
+};
+
+const timers = {
+  poll: null,
+  tick: null
 };
 
 init();
@@ -98,12 +108,14 @@ async function init() {
   els.showOriginal.checked = state.settings.showOriginal !== false;
   els.compactMode.checked = Boolean(state.settings.compactMode);
   els.transparentBg.checked = Boolean(state.settings.transparentBg);
+  els.gameMode.checked = Boolean(state.settings.gameMode);
+  state.gameMode = els.gameMode.checked;
   applyStyleSettings();
+  if (state.gameMode) await applyGameMode();
   restoreToken();
   handleSpotifyCallback();
   pollSpotify();
-  setInterval(pollSpotify, 2500);
-  setInterval(tickProgress, 250);
+  scheduleTimers();
 }
 
 function bindEvents() {
@@ -128,6 +140,19 @@ function bindEvents() {
   els.importTranslationBtn.addEventListener("click", importManualTranslation);
   els.pinToggle.addEventListener("click", toggleAlwaysOnTop);
   els.miniToggle.addEventListener("click", () => setMiniMode(true));
+  els.windowMinBtn.addEventListener("click", (event) => {
+    event.stopPropagation();
+    window.desktopApi?.minimizeWindow();
+  });
+  els.windowMaxBtn.addEventListener("click", async (event) => {
+    event.stopPropagation();
+    const maximized = await window.desktopApi?.toggleMaximizeWindow();
+    els.windowMaxBtn.textContent = maximized ? "❐" : "□";
+  });
+  els.windowCloseBtn.addEventListener("click", (event) => {
+    event.stopPropagation();
+    window.desktopApi?.closeWindow();
+  });
   els.lyricsViewport.addEventListener("dblclick", () => {
     if (state.miniMode) setMiniMode(false);
   });
@@ -140,7 +165,7 @@ function bindEvents() {
   els.lyricsViewport.addEventListener("wheel", handleLyricsWheel, { passive: false });
   els.lyricsViewport.addEventListener("pointerdown", startMiniDrag);
 
-  [els.clientId, els.translator, els.openAiModel, els.openAiKey, els.libreUrl, els.originalFontSize, els.translationFontSize, els.opacity, els.originalColor, els.translationColor, els.originalFontFamily, els.translationFontFamily, els.shadowStrength, els.showOriginal, els.compactMode, els.transparentBg].forEach((el) => {
+  [els.clientId, els.translator, els.openAiModel, els.openAiKey, els.libreUrl, els.originalFontSize, els.translationFontSize, els.opacity, els.originalColor, els.translationColor, els.originalFontFamily, els.translationFontFamily, els.shadowStrength, els.showOriginal, els.compactMode, els.transparentBg, els.gameMode].forEach((el) => {
     el.addEventListener("input", saveSettings);
     el.addEventListener("change", saveSettings);
   });
@@ -174,9 +199,12 @@ function saveSettings() {
     shadowStrength: Number(els.shadowStrength.value),
     showOriginal: els.showOriginal.checked,
     compactMode: els.compactMode.checked,
-    transparentBg: els.transparentBg.checked
+    transparentBg: els.transparentBg.checked,
+    gameMode: els.gameMode.checked
   };
   saveJson("settings", state.settings);
+  const gameModeChanged = state.gameMode !== els.gameMode.checked;
+  state.gameMode = els.gameMode.checked;
   state.openAiAvailable = Boolean(els.openAiKey.value.trim()) || state.openAiAvailable;
   if (window.desktopApi) {
     window.desktopApi.saveAppConfig({
@@ -191,6 +219,7 @@ function saveSettings() {
     });
   }
   applyStyleSettings();
+  if (gameModeChanged) applyGameMode();
 }
 
 function applyStyleSettings() {
@@ -205,6 +234,7 @@ function applyStyleSettings() {
   document.body.classList.toggle("compact", els.compactMode.checked);
   document.body.classList.toggle("transparent-bg", els.transparentBg.checked || state.miniMode);
   document.body.classList.toggle("mini-mode", state.miniMode);
+  document.body.classList.toggle("game-mode", els.gameMode.checked);
   els.openAiModelWrap.classList.toggle("hidden", els.translator.value !== "openai");
   els.openAiKeyWrap.classList.toggle("hidden", els.translator.value !== "openai");
   els.saveConfigRow.classList.toggle("hidden", els.translator.value !== "openai");
@@ -217,6 +247,24 @@ function applyStyleSettings() {
   renderConnectionControls();
   els.libreUrlWrap.classList.toggle("hidden", els.translator.value !== "libre");
   renderLyrics();
+}
+
+function scheduleTimers() {
+  if (timers.poll) clearInterval(timers.poll);
+  if (timers.tick) clearInterval(timers.tick);
+  timers.poll = setInterval(pollSpotify, state.gameMode ? 5000 : 2500);
+  timers.tick = setInterval(tickProgress, state.gameMode ? 500 : 250);
+}
+
+async function applyGameMode() {
+  document.body.classList.toggle("game-mode", state.gameMode);
+  scheduleTimers();
+  if (window.desktopApi) {
+    await window.desktopApi.setGameMode(state.gameMode);
+  }
+  setStatus(state.gameMode
+    ? "游戏覆盖模式已开启：刷新频率已降低，并强制置顶。LOL 建议使用无边框窗口模式。"
+    : "游戏覆盖模式已关闭。");
 }
 
 function redirectUri() {

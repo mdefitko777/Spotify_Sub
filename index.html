@@ -18,6 +18,11 @@
             <button id="miniToggle" class="icon-toggle hidden" type="button" title="字幕条模式">字幕条</button>
             <button id="pinToggle" class="icon-toggle hidden" type="button" title="永远置顶">置顶</button>
             <div id="playState" class="state-dot" title="Playback state"></div>
+            <div class="caption-buttons" aria-label="窗口控制">
+              <button id="windowMinBtn" class="caption-button" type="button" title="最小化">-</button>
+              <button id="windowMaxBtn" class="caption-button" type="button" title="最大化 / 还原">□</button>
+              <button id="windowCloseBtn" class="caption-button close" type="button" title="关闭到托盘">×</button>
+            </div>
           </div>
         </div>
         <div id="lyricsViewport" class="lyrics-viewport">
@@ -173,6 +178,10 @@
             <label class="check-line">
               <input id="transparentBg" type="checkbox">
               <span>透明背景</span>
+            </label>
+            <label class="check-line">
+              <input id="gameMode" type="checkbox">
+              <span>游戏覆盖模式</span>
             </label>
           </div>
         </section>

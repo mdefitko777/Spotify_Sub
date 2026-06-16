@@ -164,6 +164,22 @@ ipcMain.handle("window:setMiniMode", (_event, enabled) => {
   return Boolean(enabled);
 });
 
+ipcMain.handle("window:getBounds", () => mainWindow.getBounds());
+
+ipcMain.handle("window:setBounds", (_event, bounds) => {
+  if (!bounds || typeof bounds.x !== "number" || typeof bounds.y !== "number") {
+    return mainWindow.getBounds();
+  }
+  const current = mainWindow.getBounds();
+  mainWindow.setBounds({
+    x: Math.round(bounds.x),
+    y: Math.round(bounds.y),
+    width: Math.max(420, Math.round(bounds.width || current.width)),
+    height: Math.max(80, Math.round(bounds.height || current.height))
+  }, false);
+  return mainWindow.getBounds();
+});
+
 ipcMain.handle("app:setOpenAtLogin", (_event, enabled) => {
   setOpenAtLogin(Boolean(enabled));
   return app.getLoginItemSettings().openAtLogin;

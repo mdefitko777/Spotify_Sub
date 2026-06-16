@@ -39,6 +39,7 @@ const els = {
   disconnectBtn: document.querySelector("#disconnectBtn"),
   fetchLyricsBtn: document.querySelector("#fetchLyricsBtn"),
   translateBtn: document.querySelector("#translateBtn"),
+  copyTitleBtn: document.querySelector("#copyTitleBtn"),
   manualLrc: document.querySelector("#manualLrc"),
   loadManualBtn: document.querySelector("#loadManualBtn"),
   copyChatGptBtn: document.querySelector("#copyChatGptBtn"),
@@ -111,6 +112,7 @@ function bindEvents() {
   els.disconnectBtn.addEventListener("click", disconnectSpotify);
   els.fetchLyricsBtn.addEventListener("click", () => fetchLyricsForTrack(true));
   els.translateBtn.addEventListener("click", translateVisibleLyrics);
+  els.copyTitleBtn.addEventListener("click", copyTitleForLrcSearch);
   els.loadManualBtn.addEventListener("click", loadManualLyrics);
   els.copyChatGptBtn.addEventListener("click", copyChatGPTPrompt);
   els.importTranslationBtn.addEventListener("click", importManualTranslation);
@@ -126,6 +128,7 @@ function bindEvents() {
   els.editSettingsBtn.addEventListener("click", expandSettings);
 
   els.lyricsViewport.addEventListener("wheel", handleLyricsWheel, { passive: false });
+  els.lyricsViewport.addEventListener("pointerdown", startMiniDrag);
 
   [els.clientId, els.translator, els.openAiModel, els.openAiKey, els.libreUrl, els.originalFontSize, els.translationFontSize, els.opacity, els.originalColor, els.translationColor, els.showOriginal, els.compactMode, els.transparentBg].forEach((el) => {
     el.addEventListener("input", saveSettings);
@@ -256,6 +259,38 @@ function handleLyricsWheel(event) {
   const limit = state.miniMode ? 90 : els.lyricsViewport.clientHeight * 0.45;
   state.manualScrollOffset = Math.max(-limit, Math.min(limit, state.manualScrollOffset));
   updateActiveLine(true);
+}
+
+async function startMiniDrag(event) {
+  if (!state.miniMode || !window.desktopApi || event.button !== 0) return;
+  const startedAt = Date.now();
+  const startX = event.screenX;
+  const startY = event.screenY;
+  const startBounds = await window.desktopApi.getWindowBounds();
+  let moved = false;
+
+  function onMove(moveEvent) {
+    const dx = moveEvent.screenX - startX;
+    const dy = moveEvent.screenY - startY;
+    if (Math.abs(dx) + Math.abs(dy) < 4) return;
+    moved = true;
+    window.desktopApi.setWindowBounds({
+      ...startBounds,
+      x: startBounds.x + dx,
+      y: startBounds.y + dy
+    });
+  }
+
+  function onUp(upEvent) {
+    window.removeEventListener("pointermove", onMove);
+    window.removeEventListener("pointerup", onUp);
+    if (!moved && Date.now() - startedAt < 300 && upEvent.detail >= 2) {
+      setMiniMode(false);
+    }
+  }
+
+  window.addEventListener("pointermove", onMove);
+  window.addEventListener("pointerup", onUp);
 }
 
 async function connectSpotify() {
@@ -532,6 +567,21 @@ async function copyChatGPTPrompt() {
   } catch {
     els.manualLrc.value = prompt;
     setStatus("无法访问剪贴板，已把提示词放进文本框。");
+  }
+}
+
+async function copyTitleForLrcSearch() {
+  if (!state.track) {
+    setStatus("还没有当前歌曲标题。", true);
+    return;
+  }
+  const query = `${state.track.title} ${state.track.artist} lrc`;
+  try {
+    await navigator.clipboard.writeText(query);
+    setStatus(`已复制：${query}`);
+  } catch {
+    els.manualLrc.value = query;
+    setStatus("无法访问剪贴板，已把标题放进文本框。");
   }
 }
 

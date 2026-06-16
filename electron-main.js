@@ -18,9 +18,9 @@ async function createWindow() {
   localServer = await startLocalServer();
 
   mainWindow = new BrowserWindow({
-    width: 980,
-    height: 360,
-    minWidth: 520,
+    width: 1120,
+    height: 430,
+    minWidth: 860,
     minHeight: 160,
     frame: false,
     transparent: true,
@@ -176,11 +176,11 @@ ipcMain.handle("window:setGameMode", (_event, enabled) => {
 ipcMain.handle("window:setMiniMode", (_event, enabled) => {
   if (enabled) {
     if (!isMiniMode) normalBounds = mainWindow.getBounds();
-    mainWindow.setMinimumSize(420, 80);
+    mainWindow.setMinimumSize(520, 72);
     const targetBounds = miniBounds || {
       ...normalBounds,
-      width: Math.max(normalBounds.width, 700),
-      height: 128
+      width: Math.max(normalBounds.width, 760),
+      height: 94
     };
     mainWindow.setBounds(targetBounds, true);
     mainWindow.setAlwaysOnTop(true, "screen-saver");
@@ -204,8 +204,8 @@ ipcMain.handle("window:setBounds", (_event, bounds) => {
   mainWindow.setBounds({
     x: Math.round(bounds.x),
     y: Math.round(bounds.y),
-    width: Math.max(420, Math.round(bounds.width || current.width)),
-    height: Math.max(80, Math.round(bounds.height || current.height))
+    width: Math.max(isMiniMode ? 520 : 860, Math.round(bounds.width || current.width)),
+    height: Math.max(isMiniMode ? 72 : 160, Math.round(bounds.height || current.height))
   }, false);
   return mainWindow.getBounds();
 });

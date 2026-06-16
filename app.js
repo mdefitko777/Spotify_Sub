@@ -16,6 +16,7 @@ const state = {
   lastSyncAt: 0,
   manualScrollOffset: 0,
   miniMode: false,
+  lastMiniHeight: 0,
   gameMode: false,
   isDesktop: Boolean(window.desktopApi),
   openAiAvailable: false,
@@ -826,7 +827,21 @@ function updateActiveLine(force = false) {
     const anchor = state.miniMode ? 0.5 : 0.42;
     const target = active.offsetTop - els.lyricsViewport.clientHeight * anchor + state.manualScrollOffset;
     els.lyricsList.style.transform = `translateY(${-Math.max(0, target)}px)`;
+    if (state.miniMode) adjustMiniWindowHeight(active);
   }
+}
+
+async function adjustMiniWindowHeight(activeLine) {
+  if (!window.desktopApi || !activeLine) return;
+  const contentHeight = Math.ceil(activeLine.getBoundingClientRect().height);
+  const nextHeight = Math.max(72, Math.min(118, contentHeight + 22));
+  if (Math.abs(nextHeight - state.lastMiniHeight) < 3) return;
+  state.lastMiniHeight = nextHeight;
+  const bounds = await window.desktopApi.getWindowBounds();
+  await window.desktopApi.setWindowBounds({
+    ...bounds,
+    height: nextHeight
+  });
 }
 
 async function translateVisibleLyrics() {

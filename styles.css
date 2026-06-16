@@ -52,7 +52,7 @@ textarea {
 .shell {
   min-height: 100%;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 420px;
+  grid-template-columns: minmax(0, 1fr) 390px;
   background: rgba(15, 17, 21, var(--alpha));
 }
 
@@ -64,7 +64,7 @@ body.transparent-bg .shell {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
   min-width: 0;
-  padding: 20px 32px;
+  padding: 18px 28px;
   position: relative;
 }
 
@@ -107,30 +107,32 @@ body.transparent-bg .shell {
 .window-tools {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   -webkit-app-region: no-drag;
 }
 
 .caption-buttons {
   display: flex;
   align-items: center;
-  gap: 2px;
-  margin-left: 4px;
-  padding-left: 8px;
-  border-left: 1px solid var(--line);
+  gap: 1px;
+  margin-left: 2px;
+  padding: 2px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #0f131a;
 }
 
 .caption-button {
   display: grid;
   place-items: center;
-  width: 38px;
-  min-width: 38px;
-  min-height: 32px;
+  width: 30px;
+  min-width: 30px;
+  min-height: 28px;
   padding: 0;
   border-radius: 6px;
   background: transparent;
   color: #d7dde5;
-  font-size: 16px;
+  font-size: 14px;
   line-height: 1;
 }
 
@@ -144,12 +146,12 @@ body.transparent-bg .shell {
 }
 
 .icon-toggle {
-  min-height: 34px;
-  min-width: 74px;
-  padding: 6px 12px;
+  min-height: 30px;
+  min-width: 58px;
+  padding: 5px 9px;
   background: var(--panel-soft);
   color: var(--text);
-  font-size: 12px;
+  font-size: 11px;
   white-space: nowrap;
   flex: 0 0 auto;
 }
@@ -218,7 +220,7 @@ body.transparent-bg .shell {
 .control-panel {
   border-left: 1px solid var(--line);
   background: var(--panel);
-  padding: 16px;
+  padding: 12px;
   overflow: auto;
   scrollbar-width: thin;
 }
@@ -227,7 +229,7 @@ body.transparent-bg .shell {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 6px;
-  margin-bottom: 14px;
+  margin-bottom: 10px;
   padding: 5px;
   border: 1px solid var(--line);
   border-radius: 9px;
@@ -240,8 +242,8 @@ button {
   border-radius: 8px;
   background: var(--accent);
   color: #08110c;
-  min-height: 42px;
-  padding: 9px 14px;
+  min-height: 38px;
+  padding: 8px 11px;
   font-weight: 700;
   cursor: pointer;
   -webkit-app-region: no-drag;
@@ -275,13 +277,13 @@ button:hover {
 
 .panel-page.active {
   display: grid;
-  gap: 12px;
+  gap: 10px;
 }
 
 .panel-card {
   display: grid;
-  gap: 12px;
-  padding: 13px;
+  gap: 10px;
+  padding: 11px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--panel-card);
@@ -301,7 +303,7 @@ button:hover {
 
 label {
   display: grid;
-  gap: 7px;
+  gap: 6px;
   margin-bottom: 0;
   color: #d7dde5;
   font-size: 13px;
@@ -316,7 +318,7 @@ textarea {
   border-radius: 8px;
   background: #101218;
   color: var(--text);
-  padding: 10px 11px;
+  padding: 8px 10px;
   outline: none;
 }
 
@@ -333,13 +335,13 @@ input[type="range"] {
 }
 
 input[type="color"] {
-  height: 42px;
+  height: 38px;
   padding: 5px;
 }
 
 textarea {
-  min-height: 230px;
-  max-height: 38vh;
+  min-height: 180px;
+  max-height: 34vh;
   resize: vertical;
   line-height: 1.4;
   font-family: "Cascadia Mono", "Consolas", monospace;
@@ -354,7 +356,7 @@ code {
 .button-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  gap: 8px;
   margin-bottom: 0;
   min-width: 0;
 }
@@ -370,7 +372,7 @@ code {
   font-size: 13px;
   line-height: 1.5;
   margin: 0;
-  padding: 10px 12px;
+  padding: 8px 10px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: #10151d;
@@ -412,8 +414,8 @@ body.settings-collapsed .setup-only {
 .check-line {
   grid-template-columns: 28px 1fr;
   align-items: center;
-  min-height: 46px;
-  padding: 9px 11px;
+  min-height: 40px;
+  padding: 8px 10px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: #121923;
@@ -438,7 +440,7 @@ body.settings-collapsed .setup-only {
 }
 
 body.compact .shell {
-  grid-template-columns: minmax(0, 1fr) 380px;
+  grid-template-columns: minmax(0, 1fr) 360px;
 }
 
 body.compact .lyrics-pane {
@@ -483,7 +485,7 @@ body.mini-mode .caption-buttons {
 
 body.mini-mode .lyrics-pane {
   height: 100vh;
-  padding: 0 46px 0 18px;
+  padding: 0 22px;
   background: transparent;
 }
 
@@ -494,7 +496,7 @@ body.mini-mode .lyrics-viewport {
 }
 
 body.mini-mode .lyrics-list {
-  padding: 38px 0;
+  padding: 10px 0;
 }
 
 body.mini-mode .lyric-line {
@@ -512,7 +514,7 @@ body.mini-mode .lyric-line.active {
 body.mini-mode .translation {
   margin: 0;
   font-size: var(--translation-font-size);
-  line-height: 1.18;
+  line-height: 1.12;
   color: var(--translation-color);
 }
 
@@ -520,6 +522,7 @@ body.mini-mode .original {
   display: block;
   margin-bottom: 4px;
   font-size: var(--original-font-size);
+  line-height: 1.1;
   color: var(--original-color);
 }
 

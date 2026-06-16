@@ -63,6 +63,8 @@ const els = {
   openAtLoginWrap: document.querySelector("#openAtLoginWrap"),
   fontSize: document.querySelector("#fontSize"),
   opacity: document.querySelector("#opacity"),
+  originalColor: document.querySelector("#originalColor"),
+  translationColor: document.querySelector("#translationColor"),
   showOriginal: document.querySelector("#showOriginal"),
   compactMode: document.querySelector("#compactMode"),
   transparentBg: document.querySelector("#transparentBg")
@@ -81,6 +83,8 @@ async function init() {
   els.libreUrl.value = state.settings.libreUrl || "";
   els.fontSize.value = state.settings.fontSize || 28;
   els.opacity.value = state.settings.opacity || 92;
+  els.originalColor.value = state.settings.originalColor || "#c8d0da";
+  els.translationColor.value = state.settings.translationColor || "#ffffff";
   els.showOriginal.checked = state.settings.showOriginal !== false;
   els.compactMode.checked = Boolean(state.settings.compactMode);
   els.transparentBg.checked = Boolean(state.settings.transparentBg);
@@ -120,7 +124,7 @@ function bindEvents() {
 
   els.lyricsViewport.addEventListener("wheel", handleLyricsWheel, { passive: false });
 
-  [els.clientId, els.translator, els.openAiModel, els.openAiKey, els.libreUrl, els.fontSize, els.opacity, els.showOriginal, els.compactMode, els.transparentBg].forEach((el) => {
+  [els.clientId, els.translator, els.openAiModel, els.openAiKey, els.libreUrl, els.fontSize, els.opacity, els.originalColor, els.translationColor, els.showOriginal, els.compactMode, els.transparentBg].forEach((el) => {
     el.addEventListener("input", saveSettings);
     el.addEventListener("change", saveSettings);
   });
@@ -146,6 +150,8 @@ function saveSettings() {
     libreUrl: els.libreUrl.value.trim(),
     fontSize: Number(els.fontSize.value),
     opacity: Number(els.opacity.value),
+    originalColor: els.originalColor.value,
+    translationColor: els.translationColor.value,
     showOriginal: els.showOriginal.checked,
     compactMode: els.compactMode.checked,
     transparentBg: els.transparentBg.checked
@@ -170,6 +176,8 @@ function saveSettings() {
 function applyStyleSettings() {
   document.documentElement.style.setProperty("--font-size", `${els.fontSize.value}px`);
   document.documentElement.style.setProperty("--alpha", String(Number(els.opacity.value) / 100));
+  document.documentElement.style.setProperty("--original-color", els.originalColor.value);
+  document.documentElement.style.setProperty("--translation-color", els.translationColor.value);
   document.body.classList.toggle("compact", els.compactMode.checked);
   document.body.classList.toggle("transparent-bg", els.transparentBg.checked || state.miniMode);
   document.body.classList.toggle("mini-mode", state.miniMode);
@@ -229,7 +237,7 @@ async function setMiniMode(enabled) {
   els.miniToggle.classList.toggle("active", state.miniMode);
   els.restoreBtn.classList.toggle("hidden", !state.miniMode);
   if (window.desktopApi) await window.desktopApi.setMiniMode(state.miniMode);
-  updateActiveLine(true);
+  renderLyrics();
 }
 
 async function toggleOpenAtLogin() {
@@ -635,7 +643,7 @@ function renderLyrics() {
     const original = escapeHtml(line.original);
     const translation = escapeHtml(line.translation || "待翻译");
     const pendingClass = line.translation ? "" : " pending";
-    const originalHtml = els.showOriginal.checked ? `<div class="original">${original}</div>` : "";
+    const originalHtml = (els.showOriginal.checked || state.miniMode) ? `<div class="original">${original}</div>` : "";
     return `<div class="lyric-line" data-index="${index}">${originalHtml}<div class="translation${pendingClass}">${translation}</div></div>`;
   }).join("");
   updateActiveLine(true);

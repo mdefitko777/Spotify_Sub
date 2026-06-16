@@ -9,6 +9,8 @@
   --danger: #ff6b6b;
   --font-size: 28px;
   --alpha: 0.92;
+  --original-color: #c8d0da;
+  --translation-color: #ffffff;
 }
 
 * {
@@ -155,7 +157,7 @@ body.transparent-bg .shell {
 
 .original {
   font-size: calc(var(--font-size) * 0.72);
-  color: #c8d0da;
+  color: var(--original-color);
   line-height: 1.35;
 }
 
@@ -164,6 +166,7 @@ body.transparent-bg .shell {
   font-size: var(--font-size);
   font-weight: 800;
   line-height: 1.25;
+  color: var(--translation-color);
 }
 
 .translation.pending {
@@ -393,15 +396,18 @@ body.mini-mode .lyric-line.active {
   display: block;
 }
 
-body.mini-mode .original {
-  display: none;
-}
-
 body.mini-mode .translation {
   margin: 0;
   font-size: calc(var(--font-size) * 1.05);
   line-height: 1.18;
-  color: #fff;
+  color: var(--translation-color);
+}
+
+body.mini-mode .original {
+  display: block;
+  margin-bottom: 4px;
+  font-size: calc(var(--font-size) * 0.58);
+  color: var(--original-color);
 }
 
 @media (max-width: 760px) {

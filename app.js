@@ -655,6 +655,11 @@ async function importManualTranslation() {
     applied += 1;
   });
 
+  if (!applied) {
+    setStatus("识别到了翻译文本，但没有匹配到当前歌词行。请确认编号从 1 开始，或粘贴纯中文逐行翻译。", true);
+    return;
+  }
+
   renderLyrics();
   await saveCurrentSongCache("manual-translation");
   setStatus(`已自动导入 ${applied} 行翻译，并保存到本地缓存。`);
@@ -670,6 +675,7 @@ function parseImportedTranslations(text, expectedCount) {
     .map((line) => line.trim())
     .filter(Boolean)
     .forEach((line) => {
+      if (isInstructionLine(line)) return;
       const stripped = line
         .replace(/^[-*]\s+/, "")
         .replace(/^["'“”]+|["'“”]+$/g, "")
@@ -690,6 +696,11 @@ function parseImportedTranslations(text, expectedCount) {
   return plain.slice(0, expectedCount);
 }
 
+function isInstructionLine(line) {
+  return /^(请把|要求|不要解释|保持行数|每行只输出|歌曲《|翻译成|以下是|当然|好的|可以)/.test(line)
+    || /^第?\s*\d+\s*[条点]/.test(line);
+}
+
 function parseTranslationJson(text, expectedCount) {
   try {
     const parsed = JSON.parse(text);
@@ -706,6 +717,8 @@ function fillByOrder(values, expectedCount) {
   for (let index = 0; index < expectedCount; index += 1) {
     if (values[index]) result[index] = values[index];
   }
+  const present = result.filter(Boolean);
+  if (!present.length) return [];
   return result;
 }
 

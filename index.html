@@ -85,79 +85,96 @@
         </section>
 
         <section class="panel-page" id="tab-lyrics">
-          <div class="button-row">
-            <button id="fetchLyricsBtn" type="button">查找歌词</button>
-            <button id="translateBtn" class="secondary" type="button">翻译当前歌词</button>
+          <div class="panel-card">
+            <div class="section-title">在线歌词</div>
+            <div class="button-row">
+              <button id="fetchLyricsBtn" type="button">查找歌词</button>
+              <button id="translateBtn" class="secondary" type="button">翻译当前歌词</button>
+            </div>
+            <div class="button-row">
+              <button id="lyricsifyBtn" type="button">Lyricsify 搜索</button>
+              <button id="copyTitleBtn" class="secondary" type="button">复制标题</button>
+            </div>
           </div>
-          <div class="button-row">
-            <button id="lyricsifyBtn" type="button">Lyricsify 搜索</button>
-            <button id="copyTitleBtn" class="secondary" type="button">复制标题</button>
+          <div class="panel-card">
+            <div class="section-title">手动导入</div>
+            <label>
+              LRC / ChatGPT 翻译
+              <textarea id="manualLrc" spellcheck="false" placeholder="[00:12.00] First line...&#10;&#10;也可以粘贴 ChatGPT 翻译结果。"></textarea>
+            </label>
+            <div class="button-row">
+              <button id="loadManualBtn" type="button">载入 LRC</button>
+              <button id="copyChatGptBtn" class="secondary" type="button">复制给 ChatGPT</button>
+            </div>
+            <button id="importTranslationBtn" type="button">导入翻译</button>
+            <p id="statusText" class="status">准备就绪</p>
           </div>
-          <label>
-            LRC / ChatGPT 翻译
-            <textarea id="manualLrc" spellcheck="false" placeholder="[00:12.00] First line...&#10;&#10;也可以粘贴 ChatGPT 翻译结果。"></textarea>
-          </label>
-          <div class="button-row">
-            <button id="loadManualBtn" type="button">载入 LRC</button>
-            <button id="copyChatGptBtn" class="secondary" type="button">复制给 ChatGPT</button>
-          </div>
-          <button id="importTranslationBtn" type="button">导入翻译</button>
-          <p id="statusText" class="status">准备就绪</p>
         </section>
 
         <section class="panel-page" id="tab-style">
-          <label>
-            原文字号
-            <input id="originalFontSize" type="range" min="14" max="46" value="24">
-          </label>
-          <label>
-            翻译字号
-            <input id="translationFontSize" type="range" min="14" max="46" value="28">
-          </label>
-          <label>
-            透明度
-            <input id="opacity" type="range" min="65" max="100" value="92">
-          </label>
-          <label>
-            原文颜色
-            <input id="originalColor" type="color" value="#c8d0da">
-          </label>
-          <label>
-            翻译颜色
-            <input id="translationColor" type="color" value="#ffffff">
-          </label>
-          <label>
-            原文字体
-            <select id="originalFontFamily">
-              <option value="Yu Gothic, Meiryo, sans-serif">Yu Gothic / Meiryo</option>
-              <option value="Segoe UI, Microsoft YaHei, sans-serif">Segoe UI</option>
-              <option value="Arial, sans-serif">Arial</option>
-            </select>
-          </label>
-          <label>
-            翻译字体
-            <select id="translationFontFamily">
-              <option value="Microsoft YaHei, Segoe UI, sans-serif">微软雅黑</option>
-              <option value="SimHei, Microsoft YaHei, sans-serif">黑体</option>
-              <option value="Segoe UI, Microsoft YaHei, sans-serif">Segoe UI</option>
-            </select>
-          </label>
-          <label>
-            描边强度
-            <input id="shadowStrength" type="range" min="0" max="10" value="6">
-          </label>
-          <label class="check-line">
-            <input id="showOriginal" type="checkbox" checked>
-            显示原文
-          </label>
-          <label class="check-line">
-            <input id="compactMode" type="checkbox">
-            紧凑字幕条
-          </label>
-          <label class="check-line">
-            <input id="transparentBg" type="checkbox">
-            透明背景
-          </label>
+          <div class="panel-card">
+            <div class="section-title">字幕显示</div>
+            <label>
+              原文字号
+              <input id="originalFontSize" type="range" min="14" max="46" value="24">
+            </label>
+            <label>
+              翻译字号
+              <input id="translationFontSize" type="range" min="14" max="46" value="28">
+            </label>
+            <label>
+              透明度
+              <input id="opacity" type="range" min="65" max="100" value="92">
+            </label>
+            <label>
+              描边强度
+              <input id="shadowStrength" type="range" min="0" max="10" value="6">
+            </label>
+          </div>
+          <div class="panel-card">
+            <div class="section-title">颜色和字体</div>
+            <div class="field-grid">
+              <label>
+                原文颜色
+                <input id="originalColor" type="color" value="#c8d0da">
+              </label>
+              <label>
+                翻译颜色
+                <input id="translationColor" type="color" value="#ffffff">
+              </label>
+            </div>
+            <label>
+              原文字体
+              <select id="originalFontFamily">
+                <option value="Yu Gothic, Meiryo, sans-serif">Yu Gothic / Meiryo</option>
+                <option value="Segoe UI, Microsoft YaHei, sans-serif">Segoe UI</option>
+                <option value="Arial, sans-serif">Arial</option>
+              </select>
+            </label>
+            <label>
+              翻译字体
+              <select id="translationFontFamily">
+                <option value="Microsoft YaHei, Segoe UI, sans-serif">微软雅黑</option>
+                <option value="SimHei, Microsoft YaHei, sans-serif">黑体</option>
+                <option value="Segoe UI, Microsoft YaHei, sans-serif">Segoe UI</option>
+              </select>
+            </label>
+          </div>
+          <div class="panel-card">
+            <div class="section-title">窗口模式</div>
+            <label class="check-line">
+              <input id="showOriginal" type="checkbox" checked>
+              <span>显示原文</span>
+            </label>
+            <label class="check-line">
+              <input id="compactMode" type="checkbox">
+              <span>紧凑字幕条</span>
+            </label>
+            <label class="check-line">
+              <input id="transparentBg" type="checkbox">
+              <span>透明背景</span>
+            </label>
+          </div>
         </section>
       </aside>
     </main>

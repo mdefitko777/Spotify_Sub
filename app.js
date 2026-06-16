@@ -31,7 +31,6 @@ const els = {
   playState: document.querySelector("#playState"),
   pinToggle: document.querySelector("#pinToggle"),
   miniToggle: document.querySelector("#miniToggle"),
-  restoreBtn: document.querySelector("#restoreBtn"),
   lyricsList: document.querySelector("#lyricsList"),
   lyricsViewport: document.querySelector("#lyricsViewport"),
   clientId: document.querySelector("#clientId"),
@@ -61,7 +60,8 @@ const els = {
   libreUrlWrap: document.querySelector("#libreUrlWrap"),
   openAtLogin: document.querySelector("#openAtLogin"),
   openAtLoginWrap: document.querySelector("#openAtLoginWrap"),
-  fontSize: document.querySelector("#fontSize"),
+  originalFontSize: document.querySelector("#originalFontSize"),
+  translationFontSize: document.querySelector("#translationFontSize"),
   opacity: document.querySelector("#opacity"),
   originalColor: document.querySelector("#originalColor"),
   translationColor: document.querySelector("#translationColor"),
@@ -81,7 +81,8 @@ async function init() {
   els.openAiModel.value = state.settings.openAiModel || "gpt-4.1-mini";
   els.openAiKey.value = state.desktopConfig?.openAiKey || "";
   els.libreUrl.value = state.settings.libreUrl || "";
-  els.fontSize.value = state.settings.fontSize || 28;
+  els.originalFontSize.value = state.settings.originalFontSize || Math.round((state.settings.fontSize || 28) * 0.86);
+  els.translationFontSize.value = state.settings.translationFontSize || state.settings.fontSize || 28;
   els.opacity.value = state.settings.opacity || 92;
   els.originalColor.value = state.settings.originalColor || "#c8d0da";
   els.translationColor.value = state.settings.translationColor || "#ffffff";
@@ -115,7 +116,9 @@ function bindEvents() {
   els.importTranslationBtn.addEventListener("click", importManualTranslation);
   els.pinToggle.addEventListener("click", toggleAlwaysOnTop);
   els.miniToggle.addEventListener("click", () => setMiniMode(true));
-  els.restoreBtn.addEventListener("click", () => setMiniMode(false));
+  els.lyricsViewport.addEventListener("dblclick", () => {
+    if (state.miniMode) setMiniMode(false);
+  });
   els.openAtLogin.addEventListener("change", toggleOpenAtLogin);
   els.saveConfigBtn.addEventListener("click", saveSettings);
   els.testOpenAiBtn.addEventListener("click", testOpenAI);
@@ -124,7 +127,7 @@ function bindEvents() {
 
   els.lyricsViewport.addEventListener("wheel", handleLyricsWheel, { passive: false });
 
-  [els.clientId, els.translator, els.openAiModel, els.openAiKey, els.libreUrl, els.fontSize, els.opacity, els.originalColor, els.translationColor, els.showOriginal, els.compactMode, els.transparentBg].forEach((el) => {
+  [els.clientId, els.translator, els.openAiModel, els.openAiKey, els.libreUrl, els.originalFontSize, els.translationFontSize, els.opacity, els.originalColor, els.translationColor, els.showOriginal, els.compactMode, els.transparentBg].forEach((el) => {
     el.addEventListener("input", saveSettings);
     el.addEventListener("change", saveSettings);
   });
@@ -148,7 +151,8 @@ function saveSettings() {
     translator: els.translator.value,
     openAiModel: els.openAiModel.value.trim() || "gpt-4.1-mini",
     libreUrl: els.libreUrl.value.trim(),
-    fontSize: Number(els.fontSize.value),
+    originalFontSize: Number(els.originalFontSize.value),
+    translationFontSize: Number(els.translationFontSize.value),
     opacity: Number(els.opacity.value),
     originalColor: els.originalColor.value,
     translationColor: els.translationColor.value,
@@ -174,14 +178,14 @@ function saveSettings() {
 }
 
 function applyStyleSettings() {
-  document.documentElement.style.setProperty("--font-size", `${els.fontSize.value}px`);
+  document.documentElement.style.setProperty("--original-font-size", `${els.originalFontSize.value}px`);
+  document.documentElement.style.setProperty("--translation-font-size", `${els.translationFontSize.value}px`);
   document.documentElement.style.setProperty("--alpha", String(Number(els.opacity.value) / 100));
   document.documentElement.style.setProperty("--original-color", els.originalColor.value);
   document.documentElement.style.setProperty("--translation-color", els.translationColor.value);
   document.body.classList.toggle("compact", els.compactMode.checked);
   document.body.classList.toggle("transparent-bg", els.transparentBg.checked || state.miniMode);
   document.body.classList.toggle("mini-mode", state.miniMode);
-  els.restoreBtn.classList.toggle("hidden", !state.miniMode);
   els.openAiModelWrap.classList.toggle("hidden", els.translator.value !== "openai");
   els.openAiKeyWrap.classList.toggle("hidden", els.translator.value !== "openai");
   els.saveConfigRow.classList.toggle("hidden", els.translator.value !== "openai");
@@ -235,7 +239,6 @@ async function setMiniMode(enabled) {
   document.body.classList.toggle("mini-mode", state.miniMode);
   document.body.classList.toggle("transparent-bg", els.transparentBg.checked || state.miniMode);
   els.miniToggle.classList.toggle("active", state.miniMode);
-  els.restoreBtn.classList.toggle("hidden", !state.miniMode);
   if (window.desktopApi) await window.desktopApi.setMiniMode(state.miniMode);
   renderLyrics();
 }

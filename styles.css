@@ -7,7 +7,8 @@
   --accent: #1ed760;
   --line: #313743;
   --danger: #ff6b6b;
-  --font-size: 28px;
+  --original-font-size: 24px;
+  --translation-font-size: 28px;
   --alpha: 0.92;
   --original-color: #c8d0da;
   --translation-color: #ffffff;
@@ -156,14 +157,14 @@ body.transparent-bg .shell {
 }
 
 .original {
-  font-size: calc(var(--font-size) * 0.72);
+  font-size: var(--original-font-size);
   color: var(--original-color);
   line-height: 1.35;
 }
 
 .translation {
   margin-top: 4px;
-  font-size: var(--font-size);
+  font-size: var(--translation-font-size);
   font-weight: 800;
   line-height: 1.25;
   color: var(--translation-color);
@@ -398,7 +399,7 @@ body.mini-mode .lyric-line.active {
 
 body.mini-mode .translation {
   margin: 0;
-  font-size: calc(var(--font-size) * 1.05);
+  font-size: var(--translation-font-size);
   line-height: 1.18;
   color: var(--translation-color);
 }
@@ -406,7 +407,7 @@ body.mini-mode .translation {
 body.mini-mode .original {
   display: block;
   margin-bottom: 4px;
-  font-size: calc(var(--font-size) * 0.58);
+  font-size: var(--original-font-size);
   color: var(--original-color);
 }
 

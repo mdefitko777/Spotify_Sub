@@ -7,6 +7,8 @@ let mainWindow;
 let tray;
 let localServer;
 let normalBounds = null;
+let miniBounds = null;
+let isMiniMode = false;
 
 const isWindows = process.platform === "win32";
 
@@ -143,13 +145,21 @@ ipcMain.handle("window:setAlwaysOnTop", (_event, enabled) => {
 
 ipcMain.handle("window:setMiniMode", (_event, enabled) => {
   if (enabled) {
-    normalBounds = mainWindow.getBounds();
+    if (!isMiniMode) normalBounds = mainWindow.getBounds();
     mainWindow.setMinimumSize(420, 80);
-    mainWindow.setSize(Math.max(normalBounds.width, 700), 128, true);
+    const targetBounds = miniBounds || {
+      ...normalBounds,
+      width: Math.max(normalBounds.width, 700),
+      height: 128
+    };
+    mainWindow.setBounds(targetBounds, true);
     mainWindow.setAlwaysOnTop(true, "screen-saver");
+    isMiniMode = true;
   } else if (normalBounds) {
+    miniBounds = mainWindow.getBounds();
     mainWindow.setMinimumSize(520, 160);
     mainWindow.setBounds(normalBounds, true);
+    isMiniMode = false;
   }
   return Boolean(enabled);
 });

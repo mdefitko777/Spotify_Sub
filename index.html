@@ -20,8 +20,6 @@
             <div id="playState" class="state-dot" title="Playback state"></div>
           </div>
         </div>
-        <button id="restoreBtn" class="restore-button hidden" type="button">还原</button>
-
         <div id="lyricsViewport" class="lyrics-viewport">
           <div id="lyricsList" class="lyrics-list">
             <div class="empty-state">连接 Spotify，或粘贴 LRC 歌词开始。</div>
@@ -105,8 +103,12 @@
 
         <section class="panel-page" id="tab-style">
           <label>
-            字号
-            <input id="fontSize" type="range" min="18" max="42" value="28">
+            原文字号
+            <input id="originalFontSize" type="range" min="14" max="46" value="24">
+          </label>
+          <label>
+            翻译字号
+            <input id="translationFontSize" type="range" min="14" max="46" value="28">
           </label>
           <label>
             透明度

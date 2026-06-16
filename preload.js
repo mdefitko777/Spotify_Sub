@@ -8,6 +8,7 @@ contextBridge.exposeInMainWorld("desktopApi", {
   loadSongCache: (songKey) => ipcRenderer.invoke("cache:load", songKey),
   saveSongCache: (payload) => ipcRenderer.invoke("cache:save", payload),
   translateWithOpenAI: (payload) => ipcRenderer.invoke("openai:translate", payload),
+  setMiniMode: (enabled) => ipcRenderer.invoke("window:setMiniMode", enabled),
   setAlwaysOnTop: (enabled) => ipcRenderer.invoke("window:setAlwaysOnTop", enabled),
   setOpenAtLogin: (enabled) => ipcRenderer.invoke("app:setOpenAtLogin", enabled)
 });

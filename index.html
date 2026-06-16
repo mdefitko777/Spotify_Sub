@@ -15,10 +15,12 @@
             <div id="trackMeta" class="track-meta">连接后会自动同步当前播放</div>
           </div>
           <div class="window-tools">
+            <button id="miniToggle" class="icon-toggle hidden" type="button" title="字幕条模式">字幕条</button>
             <button id="pinToggle" class="icon-toggle hidden" type="button" title="永远置顶">置顶</button>
             <div id="playState" class="state-dot" title="Playback state"></div>
           </div>
         </div>
+        <button id="restoreBtn" class="restore-button hidden" type="button">还原</button>
 
         <div id="lyricsViewport" class="lyrics-viewport">
           <div id="lyricsList" class="lyrics-list">
@@ -117,6 +119,10 @@
           <label class="check-line">
             <input id="compactMode" type="checkbox">
             紧凑字幕条
+          </label>
+          <label class="check-line">
+            <input id="transparentBg" type="checkbox">
+            透明背景
           </label>
         </section>
       </aside>

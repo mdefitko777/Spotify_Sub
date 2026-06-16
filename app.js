@@ -14,6 +14,8 @@ const state = {
   progressMs: 0,
   isPlaying: false,
   lastSyncAt: 0,
+  manualScrollOffset: 0,
+  miniMode: false,
   isDesktop: Boolean(window.desktopApi),
   openAiAvailable: false,
   showSettings: false,
@@ -28,6 +30,8 @@ const els = {
   trackMeta: document.querySelector("#trackMeta"),
   playState: document.querySelector("#playState"),
   pinToggle: document.querySelector("#pinToggle"),
+  miniToggle: document.querySelector("#miniToggle"),
+  restoreBtn: document.querySelector("#restoreBtn"),
   lyricsList: document.querySelector("#lyricsList"),
   lyricsViewport: document.querySelector("#lyricsViewport"),
   clientId: document.querySelector("#clientId"),
@@ -60,7 +64,8 @@ const els = {
   fontSize: document.querySelector("#fontSize"),
   opacity: document.querySelector("#opacity"),
   showOriginal: document.querySelector("#showOriginal"),
-  compactMode: document.querySelector("#compactMode")
+  compactMode: document.querySelector("#compactMode"),
+  transparentBg: document.querySelector("#transparentBg")
 };
 
 init();
@@ -78,6 +83,7 @@ async function init() {
   els.opacity.value = state.settings.opacity || 92;
   els.showOriginal.checked = state.settings.showOriginal !== false;
   els.compactMode.checked = Boolean(state.settings.compactMode);
+  els.transparentBg.checked = Boolean(state.settings.transparentBg);
   applyStyleSettings();
   restoreToken();
   handleSpotifyCallback();
@@ -104,13 +110,17 @@ function bindEvents() {
   els.copyChatGptBtn.addEventListener("click", copyChatGPTPrompt);
   els.importTranslationBtn.addEventListener("click", importManualTranslation);
   els.pinToggle.addEventListener("click", toggleAlwaysOnTop);
+  els.miniToggle.addEventListener("click", () => setMiniMode(true));
+  els.restoreBtn.addEventListener("click", () => setMiniMode(false));
   els.openAtLogin.addEventListener("change", toggleOpenAtLogin);
   els.saveConfigBtn.addEventListener("click", saveSettings);
   els.testOpenAiBtn.addEventListener("click", testOpenAI);
   els.hideSettingsBtn.addEventListener("click", collapseSettings);
   els.editSettingsBtn.addEventListener("click", expandSettings);
 
-  [els.clientId, els.translator, els.openAiModel, els.openAiKey, els.libreUrl, els.fontSize, els.opacity, els.showOriginal, els.compactMode].forEach((el) => {
+  els.lyricsViewport.addEventListener("wheel", handleLyricsWheel, { passive: false });
+
+  [els.clientId, els.translator, els.openAiModel, els.openAiKey, els.libreUrl, els.fontSize, els.opacity, els.showOriginal, els.compactMode, els.transparentBg].forEach((el) => {
     el.addEventListener("input", saveSettings);
     el.addEventListener("change", saveSettings);
   });
@@ -137,7 +147,8 @@ function saveSettings() {
     fontSize: Number(els.fontSize.value),
     opacity: Number(els.opacity.value),
     showOriginal: els.showOriginal.checked,
-    compactMode: els.compactMode.checked
+    compactMode: els.compactMode.checked,
+    transparentBg: els.transparentBg.checked
   };
   saveJson("settings", state.settings);
   state.openAiAvailable = Boolean(els.openAiKey.value.trim()) || state.openAiAvailable;
@@ -160,6 +171,9 @@ function applyStyleSettings() {
   document.documentElement.style.setProperty("--font-size", `${els.fontSize.value}px`);
   document.documentElement.style.setProperty("--alpha", String(Number(els.opacity.value) / 100));
   document.body.classList.toggle("compact", els.compactMode.checked);
+  document.body.classList.toggle("transparent-bg", els.transparentBg.checked || state.miniMode);
+  document.body.classList.toggle("mini-mode", state.miniMode);
+  els.restoreBtn.classList.toggle("hidden", !state.miniMode);
   els.openAiModelWrap.classList.toggle("hidden", els.translator.value !== "openai");
   els.openAiKeyWrap.classList.toggle("hidden", els.translator.value !== "openai");
   els.saveConfigRow.classList.toggle("hidden", els.translator.value !== "openai");
@@ -191,6 +205,7 @@ async function initDesktop() {
     };
     state.savedSpotifyToken = state.desktopConfig.spotifyToken || null;
     els.pinToggle.classList.remove("hidden");
+    els.miniToggle.classList.remove("hidden");
     els.pinToggle.classList.toggle("active", Boolean(desktopState.alwaysOnTop));
     els.openAtLoginWrap.classList.remove("hidden");
     els.openAtLogin.checked = Boolean(desktopState.openAtLogin);
@@ -206,10 +221,30 @@ async function toggleAlwaysOnTop() {
   els.pinToggle.classList.toggle("active", Boolean(actual));
 }
 
+async function setMiniMode(enabled) {
+  state.miniMode = Boolean(enabled);
+  state.manualScrollOffset = 0;
+  document.body.classList.toggle("mini-mode", state.miniMode);
+  document.body.classList.toggle("transparent-bg", els.transparentBg.checked || state.miniMode);
+  els.miniToggle.classList.toggle("active", state.miniMode);
+  els.restoreBtn.classList.toggle("hidden", !state.miniMode);
+  if (window.desktopApi) await window.desktopApi.setMiniMode(state.miniMode);
+  updateActiveLine(true);
+}
+
 async function toggleOpenAtLogin() {
   if (!window.desktopApi) return;
   const actual = await window.desktopApi.setOpenAtLogin(els.openAtLogin.checked);
   els.openAtLogin.checked = Boolean(actual);
+}
+
+function handleLyricsWheel(event) {
+  if (!state.lyrics.length) return;
+  event.preventDefault();
+  state.manualScrollOffset += event.deltaY;
+  const limit = state.miniMode ? 90 : els.lyricsViewport.clientHeight * 0.45;
+  state.manualScrollOffset = Math.max(-limit, Math.min(limit, state.manualScrollOffset));
+  updateActiveLine(true);
 }
 
 async function connectSpotify() {
@@ -359,6 +394,7 @@ async function pollSpotify() {
     renderTrack();
     if (nextKey !== state.trackKey) {
       state.trackKey = nextKey;
+      state.manualScrollOffset = 0;
       state.lyrics = [];
       state.activeIndex = -1;
       renderLyrics();
@@ -619,7 +655,8 @@ function updateActiveLine(force = false) {
   });
   const active = document.querySelector(`.lyric-line[data-index="${index}"]`);
   if (active) {
-    const target = active.offsetTop - els.lyricsViewport.clientHeight * 0.42;
+    const anchor = state.miniMode ? 0.5 : 0.42;
+    const target = active.offsetTop - els.lyricsViewport.clientHeight * anchor + state.manualScrollOffset;
     els.lyricsList.style.transform = `translateY(${-Math.max(0, target)}px)`;
   }
 }

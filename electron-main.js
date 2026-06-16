@@ -6,6 +6,7 @@ const { listen } = require("./server");
 let mainWindow;
 let tray;
 let localServer;
+let normalBounds = null;
 
 const isWindows = process.platform === "win32";
 
@@ -138,6 +139,19 @@ ipcMain.handle("cache:save", async (_event, payload) => {
 ipcMain.handle("window:setAlwaysOnTop", (_event, enabled) => {
   mainWindow.setAlwaysOnTop(Boolean(enabled), "screen-saver");
   return mainWindow.isAlwaysOnTop();
+});
+
+ipcMain.handle("window:setMiniMode", (_event, enabled) => {
+  if (enabled) {
+    normalBounds = mainWindow.getBounds();
+    mainWindow.setMinimumSize(420, 80);
+    mainWindow.setSize(Math.max(normalBounds.width, 700), 128, true);
+    mainWindow.setAlwaysOnTop(true, "screen-saver");
+  } else if (normalBounds) {
+    mainWindow.setMinimumSize(520, 160);
+    mainWindow.setBounds(normalBounds, true);
+  }
+  return Boolean(enabled);
 });
 
 ipcMain.handle("app:setOpenAtLogin", (_event, enabled) => {

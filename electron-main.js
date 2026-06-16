@@ -9,6 +9,12 @@ let localServer;
 let normalBounds = null;
 let miniBounds = null;
 let isMiniMode = false;
+let trayState = {
+  miniMode: false,
+  gameMode: false,
+  transparentBg: false,
+  alwaysOnTop: true
+};
 
 const isWindows = process.platform === "win32";
 
@@ -18,9 +24,9 @@ async function createWindow() {
   localServer = await startLocalServer();
 
   mainWindow = new BrowserWindow({
-    width: 1120,
-    height: 430,
-    minWidth: 860,
+    width: 920,
+    height: 360,
+    minWidth: 560,
     minHeight: 160,
     frame: false,
     transparent: true,
@@ -64,14 +70,44 @@ function createTray() {
   `);
   tray = new Tray(nativeImage.createFromDataURL(`data:image/svg+xml,${svg}`));
   tray.setToolTip("Spotify 中文字幕窗口");
+  updateTrayMenu();
+  tray.on("double-click", () => mainWindow.show());
+}
+
+function updateTrayMenu() {
+  if (!tray) return;
   tray.setContextMenu(Menu.buildFromTemplate([
     { label: "显示窗口", click: () => mainWindow.show() },
     { label: "隐藏窗口", click: () => mainWindow.hide() },
+    { type: "separator" },
+    {
+      label: "字幕条模式",
+      type: "checkbox",
+      checked: trayState.miniMode,
+      click: (item) => sendTrayCommand("miniMode", item.checked)
+    },
+    {
+      label: "游戏覆盖模式",
+      type: "checkbox",
+      checked: trayState.gameMode,
+      click: (item) => sendTrayCommand("gameMode", item.checked)
+    },
+    {
+      label: "透明背景",
+      type: "checkbox",
+      checked: trayState.transparentBg,
+      click: (item) => sendTrayCommand("transparentBg", item.checked)
+    },
     {
       label: "永远置顶",
       type: "checkbox",
-      checked: true,
-      click: (item) => mainWindow.setAlwaysOnTop(item.checked, "screen-saver")
+      checked: trayState.alwaysOnTop,
+      click: (item) => {
+        trayState.alwaysOnTop = item.checked;
+        mainWindow.setAlwaysOnTop(item.checked, "screen-saver");
+        sendTrayCommand("alwaysOnTop", item.checked);
+        updateTrayMenu();
+      }
     },
     {
       label: "开机自启",
@@ -83,7 +119,17 @@ function createTray() {
     { label: "打开缓存目录", click: () => shell.openPath(cacheDir()) },
     { label: "退出", click: () => app.quit() }
   ]));
-  tray.on("double-click", () => mainWindow.show());
+}
+
+function sendTrayCommand(command, enabled) {
+  if (!mainWindow) return;
+  trayState = {
+    ...trayState,
+    [command]: Boolean(enabled)
+  };
+  updateTrayMenu();
+  mainWindow.show();
+  mainWindow.webContents.send("tray:command", { command, enabled: Boolean(enabled) });
 }
 
 function setOpenAtLogin(enabled) {
@@ -144,6 +190,8 @@ ipcMain.handle("cache:save", async (_event, payload) => {
 
 ipcMain.handle("window:setAlwaysOnTop", (_event, enabled) => {
   mainWindow.setAlwaysOnTop(Boolean(enabled), "screen-saver");
+  trayState.alwaysOnTop = mainWindow.isAlwaysOnTop();
+  updateTrayMenu();
   return mainWindow.isAlwaysOnTop();
 });
 
@@ -170,17 +218,25 @@ ipcMain.handle("window:setGameMode", (_event, enabled) => {
   const active = Boolean(enabled);
   mainWindow.setAlwaysOnTop(true, "screen-saver");
   mainWindow.setVisibleOnAllWorkspaces(active, { visibleOnFullScreen: active });
+  trayState.gameMode = active;
+  trayState.alwaysOnTop = true;
+  updateTrayMenu();
   return active;
 });
 
 ipcMain.handle("window:setMiniMode", (_event, enabled) => {
   if (enabled) {
     if (!isMiniMode) normalBounds = mainWindow.getBounds();
-    mainWindow.setMinimumSize(520, 72);
-    const targetBounds = miniBounds || {
+    mainWindow.setMinimumSize(360, 72);
+    const baseBounds = miniBounds || {
       ...normalBounds,
-      width: Math.max(normalBounds.width, 760),
+      width: 560,
       height: 94
+    };
+    const targetBounds = {
+      ...baseBounds,
+      width: Math.min(680, Math.max(420, Math.round(baseBounds.width || 560))),
+      height: Math.min(112, Math.max(72, Math.round(baseBounds.height || 94)))
     };
     mainWindow.setBounds(targetBounds, true);
     mainWindow.setAlwaysOnTop(true, "screen-saver");
@@ -191,6 +247,9 @@ ipcMain.handle("window:setMiniMode", (_event, enabled) => {
     mainWindow.setBounds(normalBounds, true);
     isMiniMode = false;
   }
+  trayState.miniMode = Boolean(enabled);
+  trayState.alwaysOnTop = mainWindow.isAlwaysOnTop();
+  updateTrayMenu();
   return Boolean(enabled);
 });
 
@@ -204,10 +263,21 @@ ipcMain.handle("window:setBounds", (_event, bounds) => {
   mainWindow.setBounds({
     x: Math.round(bounds.x),
     y: Math.round(bounds.y),
-    width: Math.max(isMiniMode ? 520 : 860, Math.round(bounds.width || current.width)),
+    width: Math.max(isMiniMode ? 360 : 560, Math.round(bounds.width || current.width)),
     height: Math.max(isMiniMode ? 72 : 160, Math.round(bounds.height || current.height))
   }, false);
   return mainWindow.getBounds();
+});
+
+ipcMain.handle("app:updateTrayState", (_event, partialState) => {
+  trayState = {
+    ...trayState,
+    ...Object.fromEntries(
+      Object.entries(partialState || {}).map(([key, value]) => [key, Boolean(value)])
+    )
+  };
+  updateTrayMenu();
+  return trayState;
 });
 
 ipcMain.handle("app:setOpenAtLogin", (_event, enabled) => {

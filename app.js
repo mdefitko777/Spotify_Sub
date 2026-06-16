@@ -34,6 +34,9 @@ const els = {
   playState: document.querySelector("#playState"),
   pinToggle: document.querySelector("#pinToggle"),
   miniToggle: document.querySelector("#miniToggle"),
+  settingsDrawerToggle: document.querySelector("#settingsDrawerToggle"),
+  closeSettingsDrawer: document.querySelector("#closeSettingsDrawer"),
+  settingsScrim: document.querySelector("#settingsScrim"),
   windowMinBtn: document.querySelector("#windowMinBtn"),
   windowMaxBtn: document.querySelector("#windowMaxBtn"),
   windowCloseBtn: document.querySelector("#windowCloseBtn"),
@@ -115,6 +118,9 @@ async function init() {
   if (state.gameMode) await applyGameMode();
   restoreToken();
   handleSpotifyCallback();
+  if (!state.token) openSettingsDrawer();
+  bindDesktopTrayCommands();
+  syncTrayState();
   pollSpotify();
   scheduleTimers();
 }
@@ -141,6 +147,12 @@ function bindEvents() {
   els.importTranslationBtn.addEventListener("click", importManualTranslation);
   els.pinToggle.addEventListener("click", toggleAlwaysOnTop);
   els.miniToggle.addEventListener("click", () => setMiniMode(true));
+  els.settingsDrawerToggle.addEventListener("click", openSettingsDrawer);
+  els.closeSettingsDrawer.addEventListener("click", closeSettingsDrawer);
+  els.settingsScrim.addEventListener("click", closeSettingsDrawer);
+  window.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") closeSettingsDrawer();
+  });
   els.windowMinBtn.addEventListener("click", (event) => {
     event.stopPropagation();
     window.desktopApi?.minimizeWindow();
@@ -221,6 +233,7 @@ function saveSettings() {
   }
   applyStyleSettings();
   if (gameModeChanged) applyGameMode();
+  syncTrayState();
 }
 
 function applyStyleSettings() {
@@ -248,6 +261,7 @@ function applyStyleSettings() {
   renderConnectionControls();
   els.libreUrlWrap.classList.toggle("hidden", els.translator.value !== "libre");
   renderLyrics();
+  syncTrayState();
 }
 
 function scheduleTimers() {
@@ -266,6 +280,39 @@ async function applyGameMode() {
   setStatus(state.gameMode
     ? "游戏覆盖模式已开启：刷新频率已降低，并强制置顶。LOL 建议使用无边框窗口模式。"
     : "游戏覆盖模式已关闭。");
+  syncTrayState();
+}
+
+function bindDesktopTrayCommands() {
+  if (!window.desktopApi?.onTrayCommand) return;
+  window.desktopApi.onTrayCommand(async ({ command, enabled }) => {
+    if (command === "miniMode") {
+      await setMiniMode(enabled);
+      return;
+    }
+    if (command === "gameMode") {
+      els.gameMode.checked = Boolean(enabled);
+      saveSettings();
+      return;
+    }
+    if (command === "transparentBg") {
+      els.transparentBg.checked = Boolean(enabled);
+      saveSettings();
+      return;
+    }
+    if (command === "alwaysOnTop") {
+      await setAlwaysOnTop(Boolean(enabled));
+    }
+  });
+}
+
+function syncTrayState() {
+  window.desktopApi?.updateTrayState?.({
+    miniMode: state.miniMode,
+    gameMode: els.gameMode.checked,
+    transparentBg: els.transparentBg.checked,
+    alwaysOnTop: els.pinToggle.classList.contains("active")
+  });
 }
 
 function redirectUri() {
@@ -289,6 +336,7 @@ async function initDesktop() {
     els.pinToggle.classList.toggle("active", Boolean(desktopState.alwaysOnTop));
     els.openAtLoginWrap.classList.remove("hidden");
     els.openAtLogin.checked = Boolean(desktopState.openAtLogin);
+    syncTrayState();
   } catch {
     state.isDesktop = false;
   }
@@ -297,18 +345,34 @@ async function initDesktop() {
 async function toggleAlwaysOnTop() {
   if (!window.desktopApi) return;
   const next = !els.pinToggle.classList.contains("active");
-  const actual = await window.desktopApi.setAlwaysOnTop(next);
+  await setAlwaysOnTop(next);
+}
+
+async function setAlwaysOnTop(enabled) {
+  if (!window.desktopApi) return;
+  const actual = await window.desktopApi.setAlwaysOnTop(enabled);
   els.pinToggle.classList.toggle("active", Boolean(actual));
+  syncTrayState();
 }
 
 async function setMiniMode(enabled) {
   state.miniMode = Boolean(enabled);
   state.manualScrollOffset = 0;
+  if (state.miniMode) closeSettingsDrawer();
   document.body.classList.toggle("mini-mode", state.miniMode);
   document.body.classList.toggle("transparent-bg", els.transparentBg.checked || state.miniMode);
   els.miniToggle.classList.toggle("active", state.miniMode);
   if (window.desktopApi) await window.desktopApi.setMiniMode(state.miniMode);
   renderLyrics();
+  syncTrayState();
+}
+
+function openSettingsDrawer() {
+  document.body.classList.add("settings-open");
+}
+
+function closeSettingsDrawer() {
+  document.body.classList.remove("settings-open");
 }
 
 async function toggleOpenAtLogin() {
@@ -1107,11 +1171,13 @@ function sanitizeCachedSong(song) {
 function collapseSettings() {
   state.showSettings = false;
   renderConnectionControls();
+  closeSettingsDrawer();
 }
 
 function expandSettings() {
   state.showSettings = true;
   renderConnectionControls();
+  openSettingsDrawer();
 }
 
 function renderConnectionControls() {

@@ -15,6 +15,7 @@
             <div id="trackMeta" class="track-meta">连接后会自动同步当前播放</div>
           </div>
           <div class="window-tools">
+            <button id="settingsDrawerToggle" class="icon-toggle" type="button" title="打开设置">设置</button>
             <button id="miniToggle" class="icon-toggle hidden" type="button" title="字幕条模式">字幕条</button>
             <button id="pinToggle" class="icon-toggle hidden" type="button" title="永远置顶">置顶</button>
             <div id="playState" class="state-dot" title="Playback state"></div>
@@ -32,7 +33,16 @@
         </div>
       </section>
 
-      <aside class="control-panel">
+      <button id="settingsScrim" class="settings-scrim" type="button" aria-label="关闭设置"></button>
+
+      <aside id="settingsDrawer" class="control-panel settings-drawer" aria-label="设置抽屉">
+        <div class="drawer-titlebar">
+          <div>
+            <strong>设置</strong>
+            <span>歌词、翻译和窗口</span>
+          </div>
+          <button id="closeSettingsDrawer" class="caption-button" type="button" title="关闭设置">×</button>
+        </div>
         <div class="tabs" role="tablist">
           <button class="tab active" data-tab="connect" type="button">连接</button>
           <button class="tab" data-tab="lyrics" type="button">歌词</button>

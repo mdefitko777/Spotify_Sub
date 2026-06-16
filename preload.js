@@ -17,5 +17,11 @@ contextBridge.exposeInMainWorld("desktopApi", {
   getWindowBounds: () => ipcRenderer.invoke("window:getBounds"),
   setWindowBounds: (bounds) => ipcRenderer.invoke("window:setBounds", bounds),
   setAlwaysOnTop: (enabled) => ipcRenderer.invoke("window:setAlwaysOnTop", enabled),
-  setOpenAtLogin: (enabled) => ipcRenderer.invoke("app:setOpenAtLogin", enabled)
+  setOpenAtLogin: (enabled) => ipcRenderer.invoke("app:setOpenAtLogin", enabled),
+  updateTrayState: (payload) => ipcRenderer.invoke("app:updateTrayState", payload),
+  onTrayCommand: (callback) => {
+    const handler = (_event, payload) => callback(payload);
+    ipcRenderer.on("tray:command", handler);
+    return () => ipcRenderer.removeListener("tray:command", handler);
+  }
 });

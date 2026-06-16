@@ -27,6 +27,7 @@ const state = {
 
 const els = {
   trackTitle: document.querySelector("#trackTitle"),
+  trackBar: document.querySelector(".track-bar"),
   trackMeta: document.querySelector("#trackMeta"),
   playState: document.querySelector("#playState"),
   pinToggle: document.querySelector("#pinToggle"),
@@ -40,6 +41,7 @@ const els = {
   fetchLyricsBtn: document.querySelector("#fetchLyricsBtn"),
   translateBtn: document.querySelector("#translateBtn"),
   copyTitleBtn: document.querySelector("#copyTitleBtn"),
+  lyricsifyBtn: document.querySelector("#lyricsifyBtn"),
   manualLrc: document.querySelector("#manualLrc"),
   loadManualBtn: document.querySelector("#loadManualBtn"),
   copyChatGptBtn: document.querySelector("#copyChatGptBtn"),
@@ -66,6 +68,9 @@ const els = {
   opacity: document.querySelector("#opacity"),
   originalColor: document.querySelector("#originalColor"),
   translationColor: document.querySelector("#translationColor"),
+  originalFontFamily: document.querySelector("#originalFontFamily"),
+  translationFontFamily: document.querySelector("#translationFontFamily"),
+  shadowStrength: document.querySelector("#shadowStrength"),
   showOriginal: document.querySelector("#showOriginal"),
   compactMode: document.querySelector("#compactMode"),
   transparentBg: document.querySelector("#transparentBg")
@@ -87,6 +92,9 @@ async function init() {
   els.opacity.value = state.settings.opacity || 92;
   els.originalColor.value = state.settings.originalColor || "#c8d0da";
   els.translationColor.value = state.settings.translationColor || "#ffffff";
+  els.originalFontFamily.value = state.settings.originalFontFamily || "Yu Gothic, Meiryo, sans-serif";
+  els.translationFontFamily.value = state.settings.translationFontFamily || "Microsoft YaHei, Segoe UI, sans-serif";
+  els.shadowStrength.value = state.settings.shadowStrength ?? 6;
   els.showOriginal.checked = state.settings.showOriginal !== false;
   els.compactMode.checked = Boolean(state.settings.compactMode);
   els.transparentBg.checked = Boolean(state.settings.transparentBg);
@@ -113,6 +121,8 @@ function bindEvents() {
   els.fetchLyricsBtn.addEventListener("click", () => fetchLyricsForTrack(true));
   els.translateBtn.addEventListener("click", translateVisibleLyrics);
   els.copyTitleBtn.addEventListener("click", copyTitleForLrcSearch);
+  els.lyricsifyBtn.addEventListener("click", searchLyricsify);
+  els.trackBar.addEventListener("dblclick", () => setMiniMode(true));
   els.loadManualBtn.addEventListener("click", loadManualLyrics);
   els.copyChatGptBtn.addEventListener("click", copyChatGPTPrompt);
   els.importTranslationBtn.addEventListener("click", importManualTranslation);
@@ -130,7 +140,7 @@ function bindEvents() {
   els.lyricsViewport.addEventListener("wheel", handleLyricsWheel, { passive: false });
   els.lyricsViewport.addEventListener("pointerdown", startMiniDrag);
 
-  [els.clientId, els.translator, els.openAiModel, els.openAiKey, els.libreUrl, els.originalFontSize, els.translationFontSize, els.opacity, els.originalColor, els.translationColor, els.showOriginal, els.compactMode, els.transparentBg].forEach((el) => {
+  [els.clientId, els.translator, els.openAiModel, els.openAiKey, els.libreUrl, els.originalFontSize, els.translationFontSize, els.opacity, els.originalColor, els.translationColor, els.originalFontFamily, els.translationFontFamily, els.shadowStrength, els.showOriginal, els.compactMode, els.transparentBg].forEach((el) => {
     el.addEventListener("input", saveSettings);
     el.addEventListener("change", saveSettings);
   });
@@ -159,6 +169,9 @@ function saveSettings() {
     opacity: Number(els.opacity.value),
     originalColor: els.originalColor.value,
     translationColor: els.translationColor.value,
+    originalFontFamily: els.originalFontFamily.value,
+    translationFontFamily: els.translationFontFamily.value,
+    shadowStrength: Number(els.shadowStrength.value),
     showOriginal: els.showOriginal.checked,
     compactMode: els.compactMode.checked,
     transparentBg: els.transparentBg.checked
@@ -186,6 +199,9 @@ function applyStyleSettings() {
   document.documentElement.style.setProperty("--alpha", String(Number(els.opacity.value) / 100));
   document.documentElement.style.setProperty("--original-color", els.originalColor.value);
   document.documentElement.style.setProperty("--translation-color", els.translationColor.value);
+  document.documentElement.style.setProperty("--original-font-family", els.originalFontFamily.value);
+  document.documentElement.style.setProperty("--translation-font-family", els.translationFontFamily.value);
+  document.documentElement.style.setProperty("--shadow-strength", els.shadowStrength.value);
   document.body.classList.toggle("compact", els.compactMode.checked);
   document.body.classList.toggle("transparent-bg", els.transparentBg.checked || state.miniMode);
   document.body.classList.toggle("mini-mode", state.miniMode);
@@ -575,7 +591,7 @@ async function copyTitleForLrcSearch() {
     setStatus("还没有当前歌曲标题。", true);
     return;
   }
-  const query = `${state.track.title} ${state.track.artist} lrc`;
+  const query = lrcSearchQuery();
   try {
     await navigator.clipboard.writeText(query);
     setStatus(`已复制：${query}`);
@@ -583,6 +599,36 @@ async function copyTitleForLrcSearch() {
     els.manualLrc.value = query;
     setStatus("无法访问剪贴板，已把标题放进文本框。");
   }
+}
+
+async function searchLyricsify() {
+  if (!state.track) {
+    setStatus("还没有当前歌曲标题。", true);
+    return;
+  }
+  const query = lrcSearchQuery();
+  try {
+    await navigator.clipboard.writeText(query);
+  } catch {
+    // Opening the site is still useful even if clipboard permission is unavailable.
+  }
+  if (window.desktopApi) {
+    try {
+      await window.desktopApi.openExternal("https://www.lyricsify.com/");
+      setStatus(`已打开 Lyricsify，并复制搜索词：${query}`);
+      return;
+    } catch (error) {
+      setStatus(`打开 Lyricsify 失败：${error.message}`, true);
+      return;
+    }
+  }
+  window.open("https://www.lyricsify.com/", "_blank", "noopener");
+  setStatus(`已打开 Lyricsify，并复制搜索词：${query}`);
+}
+
+function lrcSearchQuery() {
+  if (!state.track) return "";
+  return `${state.track.title} ${state.track.artist} lrc`;
 }
 
 async function importManualTranslation() {

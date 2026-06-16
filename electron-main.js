@@ -185,6 +185,15 @@ ipcMain.handle("app:setOpenAtLogin", (_event, enabled) => {
   return app.getLoginItemSettings().openAtLogin;
 });
 
+ipcMain.handle("app:openExternal", async (_event, url) => {
+  const target = String(url || "");
+  if (!/^https:\/\/www\.lyricsify\.com\/?/.test(target)) {
+    throw new Error("Unsupported external URL");
+  }
+  await shell.openExternal(target);
+  return true;
+});
+
 ipcMain.handle("app:getDesktopState", async () => {
   const config = await readConfig();
   return {

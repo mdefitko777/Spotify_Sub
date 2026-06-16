@@ -8,6 +8,7 @@ contextBridge.exposeInMainWorld("desktopApi", {
   loadSongCache: (songKey) => ipcRenderer.invoke("cache:load", songKey),
   saveSongCache: (payload) => ipcRenderer.invoke("cache:save", payload),
   translateWithOpenAI: (payload) => ipcRenderer.invoke("openai:translate", payload),
+  openExternal: (url) => ipcRenderer.invoke("app:openExternal", url),
   setMiniMode: (enabled) => ipcRenderer.invoke("window:setMiniMode", enabled),
   getWindowBounds: () => ipcRenderer.invoke("window:getBounds"),
   setWindowBounds: (bounds) => ipcRenderer.invoke("window:setBounds", bounds),

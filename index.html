@@ -89,7 +89,10 @@
             <button id="fetchLyricsBtn" type="button">查找歌词</button>
             <button id="translateBtn" class="secondary" type="button">翻译当前歌词</button>
           </div>
-          <button id="copyTitleBtn" class="secondary wide-button" type="button">复制标题查 LRC</button>
+          <div class="button-row">
+            <button id="lyricsifyBtn" type="button">Lyricsify 搜索</button>
+            <button id="copyTitleBtn" class="secondary" type="button">复制标题</button>
+          </div>
           <label>
             LRC / ChatGPT 翻译
             <textarea id="manualLrc" spellcheck="false" placeholder="[00:12.00] First line...&#10;&#10;也可以粘贴 ChatGPT 翻译结果。"></textarea>
@@ -122,6 +125,26 @@
           <label>
             翻译颜色
             <input id="translationColor" type="color" value="#ffffff">
+          </label>
+          <label>
+            原文字体
+            <select id="originalFontFamily">
+              <option value="Yu Gothic, Meiryo, sans-serif">Yu Gothic / Meiryo</option>
+              <option value="Segoe UI, Microsoft YaHei, sans-serif">Segoe UI</option>
+              <option value="Arial, sans-serif">Arial</option>
+            </select>
+          </label>
+          <label>
+            翻译字体
+            <select id="translationFontFamily">
+              <option value="Microsoft YaHei, Segoe UI, sans-serif">微软雅黑</option>
+              <option value="SimHei, Microsoft YaHei, sans-serif">黑体</option>
+              <option value="Segoe UI, Microsoft YaHei, sans-serif">Segoe UI</option>
+            </select>
+          </label>
+          <label>
+            描边强度
+            <input id="shadowStrength" type="range" min="0" max="10" value="6">
           </label>
           <label class="check-line">
             <input id="showOriginal" type="checkbox" checked>

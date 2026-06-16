@@ -12,6 +12,9 @@
   --alpha: 0.92;
   --original-color: #c8d0da;
   --translation-color: #ffffff;
+  --original-font-family: "Yu Gothic", Meiryo, sans-serif;
+  --translation-font-family: "Microsoft YaHei", "Segoe UI", sans-serif;
+  --shadow-strength: 6;
 }
 
 * {
@@ -159,6 +162,7 @@ body.transparent-bg .shell {
 .original {
   font-size: var(--original-font-size);
   color: var(--original-color);
+  font-family: var(--original-font-family);
   line-height: 1.35;
 }
 
@@ -168,6 +172,7 @@ body.transparent-bg .shell {
   font-weight: 800;
   line-height: 1.25;
   color: var(--translation-color);
+  font-family: var(--translation-font-family);
 }
 
 .translation.pending {
@@ -391,7 +396,9 @@ body.mini-mode .lyrics-list {
 body.mini-mode .lyric-line {
   display: none;
   padding: 0;
-  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9), 0 0 2px rgba(0, 0, 0, 0.9);
+  text-shadow:
+    0 2px calc(var(--shadow-strength) * 1px) rgba(0, 0, 0, 0.95),
+    0 0 calc(var(--shadow-strength) * 0.45px) rgba(0, 0, 0, 0.95);
 }
 
 body.mini-mode .lyric-line.active {
